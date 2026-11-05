@@ -1,0 +1,304 @@
+{
+  "cards": [
+    {
+      "id": "nr_001",
+      "name": "Vernon Roche",
+      "description": "Deploy: Boost self by 2. If you control a Machine, boost by 4 instead.",
+      "nation": "Northern Realms",
+      "rarity": "common",
+      "type": "unit",
+      "row": "melee",
+      "provision": 4,
+      "power": 3,
+      "armor": 0,
+      "abilities": [
+        {
+          "type": "deploy",
+          "description": "Boost self by 2. If you control a Machine, boost by 4 instead.",
+          "value": 2,
+          "conditions": {"has_machine": 4}
+        }
+      ],
+      "art_url": "",
+      "flavor_text": "\"Temeria will not fall while I draw breath.\""
+    },
+    {
+      "id": "nr_002",
+      "name": "Blue Stripes Commando",
+      "description": "Deploy: Boost self by 1. Order: Boost self by 2. Cooldown: 2.",
+      "nation": "Northern Realms",
+      "rarity": "common",
+      "type": "unit",
+      "row": "melee",
+      "provision": 4,
+      "power": 3,
+      "armor": 0,
+      "abilities": [
+        {
+          "type": "deploy",
+          "description": "Boost self by 1",
+          "value": 1
+        },
+        {
+          "type": "order",
+          "description": "Boost self by 2. Cooldown: 2.",
+          "value": 2,
+          "conditions": {"cooldown": 2}
+        }
+      ],
+      "art_url": "",
+      "flavor_text": "Elite Temerian soldiers, loyal to Roche."
+    },
+    {
+      "id": "nr_003",
+      "name": "Reinforced Ballista",
+      "description": "Order: Damage an enemy unit by 2. Cooldown: 1.",
+      "nation": "Northern Realms",
+      "rarity": "common",
+      "type": "unit",
+      "row": "ranged",
+      "provision": 5,
+      "power": 2,
+      "armor": 1,
+      "abilities": [
+        {
+          "type": "order",
+          "description": "Damage an enemy unit by 2. Cooldown: 1.",
+          "value": 2,
+          "conditions": {"cooldown": 1}
+        }
+      ],
+      "art_url": "",
+      "flavor_text": "A siege engine designed to punch through armor."
+    },
+    {
+      "id": "ng_001",
+      "name": "Imperial Golem",
+      "description": "Deploy: Boost self by 3. If opponent has no units, boost by 5 instead.",
+      "nation": "Nilfgaard",
+      "rarity": "common",
+      "type": "unit",
+      "row": "melee",
+      "provision": 4,
+      "power": 3,
+      "armor": 0,
+      "abilities": [
+        {
+          "type": "deploy",
+          "description": "Boost self by 3. If opponent has no units, boost by 5 instead.",
+          "value": 3,
+          "conditions": {"opponent_empty": 5}
+        }
+      ],
+      "art_url": "",
+      "flavor_text": "Machines know no fear, only orders."
+    },
+    {
+      "id": "ng_002",
+      "name": "Viper Witcher",
+      "description": "Deploy: Damage an enemy unit by 3. If it's a Machine, destroy it instead.",
+      "nation": "Nilfgaard",
+      "rarity": "rare",
+      "type": "unit",
+      "row": "melee",
+      "provision": 8,
+      "power": 4,
+      "armor": 0,
+      "abilities": [
+        {
+          "type": "deploy",
+          "description": "Damage an enemy unit by 3. If it's a Machine, destroy it instead.",
+          "value": 3,
+          "conditions": {"target_machine": "destroy"}
+        }
+      ],
+      "art_url": "",
+      "flavor_text": "\"The Empire pays well for monster slayers.\""
+    },
+    {
+      "id": "st_001",
+      "name": "Elven Scout",
+      "description": "Deploy: Move this unit to the other row. Order: Move an enemy unit to the other row. Cooldown: 2.",
+      "nation": "Scoia'tael",
+      "rarity": "common",
+      "type": "unit",
+      "row": "ranged",
+      "provision": 4,
+      "power": 3,
+      "armor": 0,
+      "abilities": [
+        {
+          "type": "deploy",
+          "description": "Move this unit to the other row",
+          "value": 0
+        },
+        {
+          "type": "order",
+          "description": "Move an enemy unit to the other row. Cooldown: 2.",
+          "value": 0,
+          "conditions": {"cooldown": 2}
+        }
+      ],
+      "art_url": "",
+      "flavor_text": "Swift and silent, they strike where least expected."
+    },
+    {
+      "id": "mo_001",
+      "name": "Ghoul",
+      "description": "Deathwish: Spawn a base copy of a random bronze unit from your graveyard to this row.",
+      "nation": "Monsters",
+      "rarity": "common",
+      "type": "unit",
+      "row": "melee",
+      "provision": 4,
+      "power": 3,
+      "armor": 0,
+      "abilities": [
+        {
+          "type": "deathwish",
+          "description": "Spawn a base copy of a random bronze unit from your graveyard to this row.",
+          "value": 0
+        }
+      ],
+      "art_url": "",
+      "flavor_text": "They feast on the fallen, growing stronger with each meal."
+    },
+    {
+      "id": "sy_001",
+      "name": "Bounty Hunter",
+      "description": "Deploy: Gain 2 Coins. Order: Spend 3 Coins to damage an enemy unit by 2. Cooldown: 1.",
+      "nation": "Syndicate",
+      "rarity": "common",
+      "type": "unit",
+      "row": "melee",
+      "provision": 4,
+      "power": 3,
+      "armor": 0,
+      "abilities": [
+        {
+          "type": "deploy",
+          "description": "Gain 2 Coins",
+          "value": 2
+        },
+        {
+          "type": "order",
+          "description": "Spend 3 Coins to damage an enemy unit by 2. Cooldown: 1.",
+          "value": 2,
+          "conditions": {"cost": 3, "cooldown": 1}
+        }
+      ],
+      "art_url": "",
+      "flavor_text": "\"Every head has a price. Yours included.\""
+    },
+    {
+      "id": "nr_leader_001",
+      "name": "King Foltest",
+      "description": "Order: Boost all your units on a row by 2. Cooldown: 1. Charge: 2.",
+      "nation": "Northern Realms",
+      "rarity": "legendary",
+      "type": "leader",
+      "row": "",
+      "provision": 15,
+      "power": 0,
+      "armor": 0,
+      "abilities": [
+        {
+          "type": "order",
+          "description": "Boost all your units on a row by 2. Cooldown: 1. Charge: 2.",
+          "value": 2,
+          "conditions": {"cooldown": 1, "charges": 2}
+        }
+      ],
+      "art_url": "",
+      "flavor_text": "\"The North remembers. And it strikes back.\""
+    },
+    {
+      "id": "ng_leader_001",
+      "name": "Emhyr var Emreis",
+      "description": "Order: Seize an enemy unit with power 4 or less. Cooldown: 2. Charge: 1.",
+      "nation": "Nilfgaard",
+      "rarity": "legendary",
+      "type": "leader",
+      "row": "",
+      "provision": 15,
+      "power": 0,
+      "armor": 0,
+      "abilities": [
+        {
+          "type": "order",
+          "description": "Seize an enemy unit with power 4 or less. Cooldown: 2. Charge: 1.",
+          "value": 0,
+          "conditions": {"max_power": 4, "cooldown": 2, "charges": 1}
+        }
+      ],
+      "art_url": "",
+      "flavor_text": "\"An empire is built on the backs of those who serve it.\""
+    },
+    {
+      "id": "st_leader_001",
+      "name": "Francesca Findabair",
+      "description": "Order: Spawn a Scoia'tael unit from your deck to a row. Cooldown: 2. Charge: 1.",
+      "nation": "Scoia'tael",
+      "rarity": "legendary",
+      "type": "leader",
+      "row": "",
+      "provision": 15,
+      "power": 0,
+      "armor": 0,
+      "abilities": [
+        {
+          "type": "order",
+          "description": "Spawn a Scoia'tael unit from your deck to a row. Cooldown: 2. Charge: 1.",
+          "value": 0,
+          "conditions": {"cooldown": 2, "charges": 1}
+        }
+      ],
+      "art_url": "",
+      "flavor_text": "\"Freedom is not given. It is taken.\""
+    },
+    {
+      "id": "mo_leader_001",
+      "name": "Eredin Bréacc Glas",
+      "description": "Order: Apply Frost to an enemy row. Duration: 2. Cooldown: 2. Charge: 1.",
+      "nation": "Monsters",
+      "rarity": "legendary",
+      "type": "leader",
+      "row": "",
+      "provision": 15,
+      "power": 0,
+      "armor": 0,
+      "abilities": [
+        {
+          "type": "order",
+          "description": "Apply Frost to an enemy row. Duration: 2. Cooldown: 2. Charge: 1.",
+          "value": 0,
+          "conditions": {"weather": "frost", "duration": 2, "cooldown": 2, "charges": 1}
+        }
+      ],
+      "art_url": "",
+      "flavor_text": "\"Winter comes for us all.\""
+    },
+    {
+      "id": "sy_leader_001",
+      "name": "Dijkstra",
+      "description": "Order: Look at opponent's hand. Choose a card and gain Coins equal to its provision. Cooldown: 2. Charge: 1.",
+      "nation": "Syndicate",
+      "rarity": "legendary",
+      "type": "leader",
+      "row": "",
+      "provision": 15,
+      "power": 0,
+      "armor": 0,
+      "abilities": [
+        {
+          "type": "order",
+          "description": "Look at opponent's hand. Choose a card and gain Coins equal to its provision. Cooldown: 2. Charge: 1.",
+          "value": 0,
+          "conditions": {"cooldown": 2, "charges": 1}
+        }
+      ],
+      "art_url": "",
+      "flavor_text": "\"Information is the most valuable currency.\""
+    }
+  ]
+}
