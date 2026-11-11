@@ -183,8 +183,6 @@ func (r *PlayerRepo) UpdatePlayer(ctx context.Context, p *models.Player) error {
 }
 
 func (r *PlayerRepo) AddCardToCollection(ctx context.Context, playerID int64, cardID string) error {
-	// This is a simplified approach - in production you would use proper JSONB operations
-	// For now, fetch, modify, save
 	p, err := r.GetPlayerByID(ctx, playerID)
 	if err != nil {
 		return err
@@ -193,7 +191,6 @@ func (r *PlayerRepo) AddCardToCollection(ctx context.Context, playerID int64, ca
 		return fmt.Errorf("player not found")
 	}
 
-	// Check if already has card
 	found := false
 	for _, c := range p.Collection {
 		if c.ID == cardID {
@@ -202,7 +199,14 @@ func (r *PlayerRepo) AddCardToCollection(ctx context.Context, playerID int64, ca
 		}
 	}
 	if !found {
-		p.Collection = append(p.Collection, models.Card{ID: cardID})
+		// Fetch the full card to add to collection
+		card, err := NewCardRepo(r.db).GetCard(ctx, cardID)
+		if err != nil {
+			return err
+		}
+		if card != nil {
+			p.Collection = append(p.Collection, *card)
+		}
 	}
 	return r.UpdatePlayer(ctx, p)
 }
@@ -278,7 +282,7 @@ func (r *PlayerRepo) ExtractMineGold(ctx context.Context, playerID int64, goldAm
 			last_mine_extract_at = $3,
 			updated_at = NOW()
 		WHERE id = $1 AND mine_unlocked = true AND mine_extracts_today < $4`
-	result, err := r.db.Pool.Exec(ctx, query, playerID, goldAmount, now, 10) // Max 10 extracts
+	result, err := r.db.Pool.Exec(ctx, query, playerID, goldAmount, now, 10)
 	if err != nil {
 		return err
 	}

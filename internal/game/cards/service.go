@@ -25,8 +25,16 @@ func (s *Service) GetCardsByNation(ctx context.Context, nation models.Nation) ([
 	return s.repo.GetCardsByNation(ctx, nation)
 }
 
+func (s *Service) GetCardsByFaction(ctx context.Context, faction models.Faction) ([]*models.Card, error) {
+	return s.repo.GetCardsByFaction(ctx, faction)
+}
+
 func (s *Service) GetCardsByRarity(ctx context.Context, rarity models.Rarity) ([]*models.Card, error) {
 	return s.repo.GetCardsByRarity(ctx, rarity)
+}
+
+func (s *Service) GetCardsByType(ctx context.Context, cardType models.CardType) ([]*models.Card, error) {
+	return s.repo.GetCardsByType(ctx, cardType)
 }
 
 func (s *Service) GetAllCards(ctx context.Context) ([]*models.Card, error) {
@@ -46,10 +54,16 @@ func (s *Service) CreateCardInstance(card *models.Card, ownerID int64) *models.C
 		CardID:     card.ID,
 		InstanceID: generateInstanceID(),
 		Power:      card.Power,
+		BasePower:  card.Power,
 		Armor:      card.Armor,
+		Boosted:    0,
+		Damaged:    0,
 		Row:        card.Row,
 		OwnerID:    ownerID,
+		IsHero:     card.IsHero,
+		Abilities:  card.Abilities,
 		Statuses:   []models.Status{},
+		Card:       card,
 	}
 }
 
