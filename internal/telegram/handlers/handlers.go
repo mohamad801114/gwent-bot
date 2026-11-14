@@ -192,11 +192,9 @@ func (h *Handlers) OnHelp(c tele.Context) error {
 // DEBUG: Test inline keyboard
 func (h *Handlers) OnTestKeyboard(c tele.Context) error {
 	markup := &tele.ReplyMarkup{}
-	btn1 := markup.Data("🃏 Test Button 1", "test_btn_1")
-	btn2 := markup.Data("🎁 Test Button 2", "test_btn_2")
-	btn3 := markup.Data("🔙 Back", "main_menu")
-	markup.Row(btn1, btn2)
-	markup.Row(btn3)
+	row1 := markup.Row(markup.Data("🃏 Test Button 1", "test_btn_1"), markup.Data("🎁 Test Button 2", "test_btn_2"))
+	row2 := markup.Row(markup.Data("🔙 Back", "main_menu"))
+	markup.Inline(row1, row2)
 	return c.Send("🔧 <b>Debug: Inline Keyboard Test</b>\n\nIf you see buttons below, inline keyboards work!", markup, tele.ModeHTML)
 }
 

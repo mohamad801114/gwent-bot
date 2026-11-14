@@ -134,15 +134,17 @@ func (k *KeyboardBuilder) DeckManagement(deck []string, collection []models.Card
 }
 
 func (k *KeyboardBuilder) ShopMenu() *tele.ReplyMarkup {
-	markup := &tele.ReplyMarkup{ResizeKeyboard: true}
+	markup := &tele.ReplyMarkup{}
 
-	btnCards := markup.Data("ðŸƒ Buy Cards", "shop_cards")
-	btnChests := markup.Data("ðŸŽ Buy Chests", "shop_chests")
-	btnAxe := markup.Data("â›ï¸ Buy Axe", "shop_axe")
-	btnBack := markup.Data("ðŸ”™ Back", "main_menu")
-
-	markup.Row(btnCards, btnChests)
-	markup.Row(btnAxe, btnBack)
+	row1 := markup.Row(
+		markup.Data("ðŸƒ Buy Cards", "shop_cards"),
+		markup.Data("ðŸŽ Buy Chests", "shop_chests"),
+	)
+	row2 := markup.Row(
+		markup.Data("â›ï¸ Buy Axe", "shop_axe"),
+		markup.Data("ðŸ”™ Back", "main_menu"),
+	)
+	markup.Inline(row1, row2)
 
 	return markup
 }
