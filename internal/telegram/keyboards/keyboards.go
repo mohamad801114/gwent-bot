@@ -20,15 +20,15 @@ func New(cfg *config.Config) *KeyboardBuilder {
 func (k *KeyboardBuilder) MainMenu() *tele.ReplyMarkup {
 	markup := &tele.ReplyMarkup{ResizeKeyboard: true}
 
-	btnBattle := markup.Data("âš”ï¸ Battle", "battle_menu")
-	btnDeck := markup.Data("ðŸƒ My Deck", "show_deck")
-	btnCollection := markup.Data("ðŸ“š Collection", "show_collection")
-	btnShop := markup.Data("ðŸª Shop", "shop_menu")
-	btnMine := markup.Data("â›ï¸ Mine", "mine_menu")
-	btnChest := markup.Data("ðŸŽ Chests", "chest_menu")
-	btnProfile := markup.Data("ðŸ‘¤ Profile", "show_profile")
-	btnLeader := markup.Data("ðŸ‘‘ Leader", "leader_menu")
-	btnHelp := markup.Data("â“ Help", "show_help")
+	btnBattle := markup.Data("⚔️ Battle", "battle_menu")
+	btnDeck := markup.Data("🃏 My Deck", "show_deck")
+	btnCollection := markup.Data("📚 Collection", "show_collection")
+	btnShop := markup.Data("🏪 Shop", "shop_menu")
+	btnMine := markup.Data("⛏️ Mine", "mine_menu")
+	btnChest := markup.Data("🎁 Chests", "chest_menu")
+	btnProfile := markup.Data("👤 Profile", "show_profile")
+	btnLeader := markup.Data("💎 Leader", "leader_menu")
+	btnHelp := markup.Data("❓ Help", "show_help")
 
 	markup.Row(btnBattle)
 	markup.Row(btnDeck, btnCollection)
@@ -42,12 +42,12 @@ func (k *KeyboardBuilder) MainMenu() *tele.ReplyMarkup {
 func (k *KeyboardBuilder) BattleMenu() *tele.ReplyMarkup {
 	markup := &tele.ReplyMarkup{ResizeKeyboard: true}
 
-	btnPvE := markup.Data("ðŸ¤– vs Bot (Easy)", "battle_pve_easy")
-	btnPvEMedium := markup.Data("ðŸ¤– vs Bot (Medium)", "battle_pve_medium")
-	btnPvEHard := markup.Data("ðŸ¤– vs Bot (Hard)", "battle_pve_hard")
-	btnPvP := markup.Data("ðŸ‘¥ vs Player", "battle_pvp")
-	btnFriend := markup.Data("ðŸ¤ vs Friend", "battle_friend")
-	btnBack := markup.Data("ðŸ”™ Back", "main_menu")
+	btnPvE := markup.Data("🤖 vs Bot (Easy)", "battle_pve_easy")
+	btnPvEMedium := markup.Data("🤖 vs Bot (Medium)", "battle_pve_medium")
+	btnPvEHard := markup.Data("🤖 vs Bot (Hard)", "battle_pve_hard")
+	btnPvP := markup.Data("👥 vs Player", "battle_pvp")
+	btnFriend := markup.Data("🤝 vs Friend", "battle_friend")
+	btnBack := markup.Data("🔙 Back", "main_menu")
 
 	markup.Row(btnPvE)
 	markup.Row(btnPvEMedium)
@@ -62,21 +62,21 @@ func (k *KeyboardBuilder) BattleAction(battleID string, isPlayerTurn bool, canPl
 	markup := &tele.ReplyMarkup{}
 
 	if !isPlayerTurn {
-		btnWait := markup.Data("â³ Opponent's turn...", "battle_wait")
+		btnWait := markup.Data("⏳ Opponent's turn...", "battle_wait")
 		markup.Row(btnWait)
 		return markup
 	}
 
 	if canPlayCard && handSize > 0 {
-		btnPlay := markup.Data("ðŸƒ Play Card", "battle_play_card:"+battleID)
+		btnPlay := markup.Data("🃏 Play Card", "battle_play_card:"+battleID)
 		markup.Row(btnPlay)
 	}
 
-	btnPass := markup.Data("â­ï¸ Pass", "battle_pass:"+battleID)
-	btnLeader := markup.Data("ðŸ‘‘ Leader Ability", "battle_leader:"+battleID)
-	btnViewBoard := markup.Data("ðŸ‘ï¸ View Board", "battle_view_board:"+battleID)
-	btnViewHand := markup.Data("ðŸ¤² View Hand", "battle_view_hand:"+battleID)
-	btnForfeit := markup.Data("ðŸ³ï¸ Forfeit", "battle_forfeit:"+battleID)
+	btnPass := markup.Data("⏭️ Pass", "battle_pass:"+battleID)
+	btnLeader := markup.Data("💎 Leader Ability", "battle_leader:"+battleID)
+	btnViewBoard := markup.Data("👁️ View Board", "battle_view_board:"+battleID)
+	btnViewHand := markup.Data("🤲 View Hand", "battle_view_hand:"+battleID)
+	btnForfeit := markup.Data("🏳️ Forfeit", "battle_forfeit:"+battleID)
 
 	markup.Row(btnPass)
 	markup.Row(btnLeader, btnViewBoard)
@@ -99,7 +99,7 @@ func (k *KeyboardBuilder) CardSelection(hand []models.CardInstance, battleID str
 		markup.Row(btn)
 	}
 
-	btnBack := markup.Data("ðŸ”™ Back", "battle_back:"+battleID)
+	btnBack := markup.Data("🔙 Back", "battle_back:"+battleID)
 	markup.Row(btnBack)
 
 	return markup
@@ -108,10 +108,10 @@ func (k *KeyboardBuilder) CardSelection(hand []models.CardInstance, battleID str
 func (k *KeyboardBuilder) RowSelection(cardInstanceID, battleID string) *tele.ReplyMarkup {
 	markup := &tele.ReplyMarkup{}
 
-	btnMelee := markup.Data("âš”ï¸ Melee", "battle_row:"+battleID+":"+cardInstanceID+":melee")
-	btnRanged := markup.Data("ðŸ¹ Ranged", "battle_row:"+battleID+":"+cardInstanceID+":ranged")
-	btnSiege := markup.Data("ðŸ° Siege", "battle_row:"+battleID+":"+cardInstanceID+":siege")
-	btnBack := markup.Data("ðŸ”™ Back", "battle_select_card:"+battleID)
+	btnMelee := markup.Data("⚔️ Melee", "battle_row:"+battleID+":"+cardInstanceID+":melee")
+	btnRanged := markup.Data("🏹 Ranged", "battle_row:"+battleID+":"+cardInstanceID+":ranged")
+	btnSiege := markup.Data("🏰 Siege", "battle_row:"+battleID+":"+cardInstanceID+":siege")
+	btnBack := markup.Data("🔙 Back", "battle_select_card:"+battleID)
 
 	markup.Row(btnMelee, btnRanged, btnSiege)
 	markup.Row(btnBack)
@@ -122,10 +122,10 @@ func (k *KeyboardBuilder) RowSelection(cardInstanceID, battleID string) *tele.Re
 func (k *KeyboardBuilder) DeckManagement(deck []string, collection []models.Card, maxDeckSize int) *tele.ReplyMarkup {
 	markup := &tele.ReplyMarkup{}
 
-	btnAdd := markup.Data("âž• Add Card", "deck_add")
-	btnRemove := markup.Data("âž– Remove Card", "deck_remove")
-	btnSave := markup.Data("ðŸ’¾ Save Deck", "deck_save")
-	btnBack := markup.Data("ðŸ”™ Back", "main_menu")
+	btnAdd := markup.Data("➕ Add Card", "deck_add")
+	btnRemove := markup.Data("➖ Remove Card", "deck_remove")
+	btnSave := markup.Data("💾 Save Deck", "deck_save")
+	btnBack := markup.Data("🔙 Back", "main_menu")
 
 	markup.Row(btnAdd, btnRemove)
 	markup.Row(btnSave, btnBack)
@@ -165,16 +165,16 @@ func (k *KeyboardBuilder) ShopCards(cards []models.Card, page, totalPages int) *
 
 	navRow := []tele.Btn{}
 	if page > 1 {
-		navRow = append(navRow, markup.Data("â¬…ï¸ Prev", "shop_page:"+strconv.Itoa(page-1)))
+		navRow = append(navRow, markup.Data("⬅️ Prev", "shop_page:"+strconv.Itoa(page-1)))
 	}
 	if page < totalPages {
-		navRow = append(navRow, markup.Data("Next âž¡ï¸", "shop_page:"+strconv.Itoa(page+1)))
+		navRow = append(navRow, markup.Data("Next ➡️", "shop_page:"+strconv.Itoa(page+1)))
 	}
 	if len(navRow) > 0 {
 		markup.Row(navRow...)
 	}
 
-	btnBack := markup.Data("ðŸ”™ Back", "shop_menu")
+	btnBack := markup.Data("🔙 Back", "shop_main")
 	markup.Row(btnBack)
 
 	return markup
@@ -184,16 +184,16 @@ func (k *KeyboardBuilder) MineMenu(unlocked bool, extractsLeft, axeDurability in
 	markup := &tele.ReplyMarkup{ResizeKeyboard: true}
 
 	if !unlocked {
-		btnUnlock := markup.Data("ðŸ”“ Unlock Mine (500 Gold)", "mine_unlock")
+		btnUnlock := markup.Data("💎 Unlock Mine (500 Gold)", "mine_unlock")
 		markup.Row(btnUnlock)
 	} else {
-		btnExtract := markup.Data("â›ï¸ Extract Gold", "mine_extract")
-		btnBuyAxe := markup.Data("ðŸª“ Buy Axe (100 Gold)", "mine_buy_axe")
+		btnExtract := markup.Data("⛏️ Extract Gold", "mine_extract")
+		btnBuyAxe := markup.Data("🪓 Buy Axe (100 Gold)", "mine_buy_axe")
 		markup.Row(btnExtract)
 		markup.Row(btnBuyAxe)
 	}
 
-	btnBack := markup.Data("ðŸ”™ Back", "main_menu")
+	btnBack := markup.Data("🔙 Back", "main_menu")
 	markup.Row(btnBack)
 
 	return markup
@@ -212,7 +212,7 @@ func (k *KeyboardBuilder) ChestMenu(chests []models.Chest, playerLevel models.Pl
 		}
 	}
 
-	btnBack := markup.Data("ðŸ”™ Back", "main_menu")
+	btnBack := markup.Data("🔙 Back", "main_menu")
 	markup.Row(btnBack)
 
 	return markup
@@ -224,13 +224,13 @@ func (k *KeyboardBuilder) LeaderSelection(leaders []models.Card, currentLeaderID
 	for _, leader := range leaders {
 		btnText := leader.Name
 		if leader.ID == currentLeaderID {
-			btnText = "âœ… " + btnText
+			btnText = "✅ " + btnText
 		}
 		btn := markup.Data(btnText, "leader_select:"+leader.ID)
 		markup.Row(btn)
 	}
 
-	btnBack := markup.Data("ðŸ”™ Back", "main_menu")
+	btnBack := markup.Data("🔙 Back", "main_menu")
 	markup.Row(btnBack)
 
 	return markup
@@ -239,8 +239,8 @@ func (k *KeyboardBuilder) LeaderSelection(leaders []models.Card, currentLeaderID
 func (k *KeyboardBuilder) Confirm(action, data string) *tele.ReplyMarkup {
 	markup := &tele.ReplyMarkup{}
 
-	btnYes := markup.Data("âœ… Yes", "confirm:"+action+":"+data)
-	btnNo := markup.Data("âŒ No", "cancel:"+action)
+	btnYes := markup.Data("✅ Yes", "confirm:"+action+":"+data)
+	btnNo := markup.Data("❌ No", "cancel:"+action)
 
 	markup.Row(btnYes, btnNo)
 
@@ -250,8 +250,8 @@ func (k *KeyboardBuilder) Confirm(action, data string) *tele.ReplyMarkup {
 func (k *KeyboardBuilder) FriendBattleInvite(inviterID int64) *tele.ReplyMarkup {
 	markup := &tele.ReplyMarkup{}
 
-	btnAccept := markup.Data("âœ… Accept Challenge", "friend_accept:"+strconv.FormatInt(inviterID, 10))
-	btnDecline := markup.Data("âŒ Decline", "friend_decline")
+	btnAccept := markup.Data("✅ Accept Challenge", "friend_accept:"+strconv.FormatInt(inviterID, 10))
+	btnDecline := markup.Data("❌ Decline", "friend_decline")
 
 	markup.Row(btnAccept, btnDecline)
 
@@ -263,10 +263,10 @@ func (k *KeyboardBuilder) Pagination(currentPage, totalPages int, prefix string)
 
 	navRow := []tele.Btn{}
 	if currentPage > 1 {
-		navRow = append(navRow, markup.Data("â¬…ï¸ Prev", prefix+":"+strconv.Itoa(currentPage-1)))
+		navRow = append(navRow, markup.Data("⬅️ Prev", prefix+":"+strconv.Itoa(currentPage-1)))
 	}
 	if currentPage < totalPages {
-		navRow = append(navRow, markup.Data("Next âž¡ï¸", prefix+":"+strconv.Itoa(currentPage+1)))
+		navRow = append(navRow, markup.Data("Next ➡️", prefix+":"+strconv.Itoa(currentPage+1)))
 	}
 	if len(navRow) > 0 {
 		markup.Row(navRow...)

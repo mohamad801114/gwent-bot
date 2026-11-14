@@ -72,6 +72,7 @@ func (h *Handlers) RegisterRoutes() {
 	h.bot.Handle("/mine", h.OnMine)
 	h.bot.Handle("/chest", h.OnChest)
 	h.bot.Handle("/leader", h.OnLeader)
+	h.bot.Handle("/testcb", h.OnTestCallback)
 
 	// Admin routes (with middleware)
 	h.bot.Handle("/admin", h.AdminMiddleware(h.OnAdmin))
@@ -120,6 +121,13 @@ func (h *Handlers) isAdmin(userID int64) bool {
 		}
 	}
 	return false
+}
+
+// answerCallback answers the callback query to remove loading state
+func (h *Handlers) answerCallback(c tele.Context) {
+	if cb := c.Callback(); cb != nil {
+		_ = c.Bot().Respond(cb, &tele.CallbackResponse{Text: ""})
+	}
 }
 
 func (h *Handlers) OnStart(c tele.Context) error {
@@ -430,6 +438,7 @@ func (h *Handlers) OnLeader(c tele.Context) error {
 }
 
 func (h *Handlers) OnMainMenu(c tele.Context) error {
+	h.answerCallback(c)
 	ctx := context.Background()
 	user := c.Sender()
 
@@ -443,52 +452,64 @@ func (h *Handlers) OnMainMenu(c tele.Context) error {
 }
 
 func (h *Handlers) OnBattleMenu(c tele.Context) error {
-	msg := "âš”ï¸ <b>Battle Menu</b>\n\nChoose your battle type:"
+	h.answerCallback(c)
+	msg := "⚔️ <b>Battle Menu</b>\n\nChoose your battle type:"
 	return c.Edit(msg, h.keyboardBuilder.BattleMenu(), tele.ModeHTML)
 }
 
 func (h *Handlers) OnShowDeck(c tele.Context) error {
+	h.answerCallback(c)
 	return h.OnDeck(c)
 }
 
 func (h *Handlers) OnShowCollection(c tele.Context) error {
+	h.answerCallback(c)
 	return h.OnCollection(c)
 }
 
 func (h *Handlers) OnShowProfile(c tele.Context) error {
+	h.answerCallback(c)
 	return h.OnProfile(c)
 }
 
 func (h *Handlers) OnShowHelp(c tele.Context) error {
+	h.answerCallback(c)
 	msg := h.renderer.HelpMessage()
 	return c.Edit(msg, h.keyboardBuilder.MainMenu(), tele.ModeHTML)
 }
 
 func (h *Handlers) OnShopMenu(c tele.Context) error {
+	h.answerCallback(c)
 	return h.OnShop(c)
 }
 
 func (h *Handlers) OnMineMenu(c tele.Context) error {
+	h.answerCallback(c)
 	return h.OnMine(c)
 }
 
 func (h *Handlers) OnChestMenu(c tele.Context) error {
+	h.answerCallback(c)
 	return h.OnChest(c)
 }
 
 func (h *Handlers) OnLeaderMenu(c tele.Context) error {
+	h.answerCallback(c)
 	return h.OnLeader(c)
 }
 
 func (h *Handlers) OnBattlePvEEasy(c tele.Context) error {
+	h.answerCallback(c)
 	return h.createPvEBattle(c, "easy")
 }
 
 func (h *Handlers) OnBattlePvEMedium(c tele.Context) error {
+	h.answerCallback(c)
 	return h.createPvEBattle(c, "medium")
 }
 
 func (h *Handlers) OnBattlePvEHard(c tele.Context) error {
+	h.answerCallback(c)
 	return h.createPvEBattle(c, "hard")
 }
 
@@ -511,10 +532,12 @@ func (h *Handlers) createPvEBattle(c tele.Context, difficulty string) error {
 }
 
 func (h *Handlers) OnBattlePvP(c tele.Context) error {
+	h.answerCallback(c)
 	return c.Send(h.renderer.InfoMessage("PvP matchmaking coming soon!"), tele.ModeHTML)
 }
 
 func (h *Handlers) OnBattleFriend(c tele.Context) error {
+	h.answerCallback(c)
 	return h.createFriendBattle(c)
 }
 
@@ -620,12 +643,15 @@ func (h *Handlers) showBattleState(c tele.Context, b *models.Battle, player *mod
 }
 
 func (h *Handlers) OnCallback(c tele.Context) error {
-	// Acknowledge callback query immediately (required by Telegram)
-	if cb := c.Callback(); cb != nil {
-		_ = c.Answer(&tele.QueryResponse{})
+	cb := c.Callback()
+	if cb != nil {
+		// Answer callback query to remove loading state
+		_ = c.Bot().Respond(cb, &tele.CallbackResponse{
+			Text: "",
+		})
 	}
 
-	data := c.Callback().Data
+	data := cb.Data
 
 	if strings.HasPrefix(data, "battle_") {
 		return h.handleBattleCallback(c, data)
@@ -659,7 +685,26 @@ func (h *Handlers) OnCallback(c tele.Context) error {
 		return h.handleFriendCallback(c, data)
 	}
 
+	if strings.HasPrefix(data, "test_") {
+		return h.handleTestCallback(c, data)
+	}
+
 	return nil
+}
+
+func (h *Handlers) handleTestCallback(c tele.Context, data string) error {
+	if data == "test_click" {
+		return c.Send("✅ Callback works! Button click detected.", tele.ModeHTML)
+	}
+	return nil
+}
+
+// DEBUG: Test callback query
+func (h *Handlers) OnTestCallback(c tele.Context) error {
+	markup := &tele.ReplyMarkup{}
+	row := markup.Row(markup.Data("🔘 Test Click", "test_click"))
+	markup.Inline(row)
+	return c.Send("🔧 <b>Callback Test</b>\n\nClick the button below to test if callbacks work:", markup, tele.ModeHTML)
 }
 
 func (h *Handlers) handleBattleCallback(c tele.Context, data string) error {
@@ -774,7 +819,7 @@ func (h *Handlers) handleShopCallback(c tele.Context, data string) error {
 		return h.buyChest(c, ctx, player, chestID)
 	}
 
-	if data == "shop_buy_axe" {
+	if data == "shop_axe" {
 		return h.buyAxe(c, ctx, player)
 	}
 
