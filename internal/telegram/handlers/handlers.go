@@ -64,7 +64,6 @@ func (h *Handlers) RegisterRoutes() {
 	// Public routes
 	h.bot.Handle("/start", h.OnStart)
 	h.bot.Handle("/help", h.OnHelp)
-	h.bot.Handle("/testkb", h.OnTestKeyboard)
 	h.bot.Handle("/profile", h.OnProfile)
 	h.bot.Handle("/deck", h.OnDeck)
 	h.bot.Handle("/collection", h.OnCollection)
@@ -187,15 +186,6 @@ func (h *Handlers) OnStart(c tele.Context) error {
 func (h *Handlers) OnHelp(c tele.Context) error {
 	msg := h.renderer.HelpMessage()
 	return c.Send(msg, tele.ModeHTML)
-}
-
-// DEBUG: Test inline keyboard
-func (h *Handlers) OnTestKeyboard(c tele.Context) error {
-	markup := &tele.ReplyMarkup{}
-	row1 := markup.Row(markup.Data("🃏 Test Button 1", "test_btn_1"), markup.Data("🎁 Test Button 2", "test_btn_2"))
-	row2 := markup.Row(markup.Data("🔙 Back", "main_menu"))
-	markup.Inline(row1, row2)
-	return c.Send("🔧 <b>Debug: Inline Keyboard Test</b>\n\nIf you see buttons below, inline keyboards work!", markup, tele.ModeHTML)
 }
 
 func (h *Handlers) OnProfile(c tele.Context) error {
@@ -630,6 +620,11 @@ func (h *Handlers) showBattleState(c tele.Context, b *models.Battle, player *mod
 }
 
 func (h *Handlers) OnCallback(c tele.Context) error {
+	// Acknowledge callback query immediately (required by Telegram)
+	if cb := c.Callback(); cb != nil {
+		_ = c.Answer(&tele.QueryResponse{})
+	}
+
 	data := c.Callback().Data
 
 	if strings.HasPrefix(data, "battle_") {

@@ -137,12 +137,12 @@ func (k *KeyboardBuilder) ShopMenu() *tele.ReplyMarkup {
 	markup := &tele.ReplyMarkup{}
 
 	row1 := markup.Row(
-		markup.Data("ðŸƒ Buy Cards", "shop_cards"),
-		markup.Data("ðŸŽ Buy Chests", "shop_chests"),
+		markup.Data("🃏 Buy Cards", "shop_cards"),
+		markup.Data("🎁 Buy Chests", "shop_chests"),
 	)
 	row2 := markup.Row(
-		markup.Data("â›ï¸ Buy Axe", "shop_axe"),
-		markup.Data("ðŸ”™ Back", "main_menu"),
+		markup.Data("⛏️ Buy Axe", "shop_axe"),
+		markup.Data("🔙 Back", "main_menu"),
 	)
 	markup.Inline(row1, row2)
 
