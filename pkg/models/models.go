@@ -378,3 +378,15 @@ func (c *CardRowDB) Scan(v interface{}) error {
 	}
 	return json.Unmarshal(b, c)
 }
+
+// ShopItem represents an item in the shop
+type ShopItem struct {
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	Description  string `json:"description"`
+	CardID       string `json:"card_id,omitempty"`
+	CostGold     int    `json:"cost_gold"`
+	CostScrap    int    `json:"cost_scrap"`
+	Stock        int    `json:"stock"`         // -1 for unlimited
+	LevelRequired int   `json:"level_required"`
+}

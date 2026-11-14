@@ -294,6 +294,63 @@ func (r *CardRepo) GetFundamentalCards(ctx context.Context) ([]*models.Card, err
 	return cards, nil
 }
 
+// GetShopItems returns all available shop items
+func (r *CardRepo) GetShopItems(ctx context.Context) ([]*models.ShopItem, error) {
+	query := `SELECT id, name, description, card_id, cost_gold, cost_scrap, stock, level_required FROM shop_items WHERE stock != 0 ORDER BY level_required, cost_gold`
+
+	rows, err := r.db.Pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []*models.ShopItem
+	for rows.Next() {
+		var item models.ShopItem
+		var cardID sql.NullString
+
+		err := rows.Scan(
+			&item.ID, &item.Name, &item.Description, &cardID,
+			&item.CostGold, &item.CostScrap, &item.Stock, &item.LevelRequired,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if cardID.Valid {
+			item.CardID = cardID.String
+		}
+		items = append(items, &item)
+	}
+
+	return items, nil
+}
+
+// GetShopItem returns a specific shop item by ID
+func (r *CardRepo) GetShopItem(ctx context.Context, itemID string) (*models.ShopItem, error) {
+	query := `SELECT id, name, description, card_id, cost_gold, cost_scrap, stock, level_required FROM shop_items WHERE id = $1`
+
+	var item models.ShopItem
+	var cardID sql.NullString
+
+	err := r.db.Pool.QueryRow(ctx, query, itemID).Scan(
+		&item.ID, &item.Name, &item.Description, &cardID,
+		&item.CostGold, &item.CostScrap, &item.Stock, &item.LevelRequired,
+	)
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if cardID.Valid {
+		item.CardID = cardID.String
+	}
+
+	return &item, nil
+}
+
 func joinPlaceholders(placeholders []string) string {
 	result := ""
 	for i, p := range placeholders {

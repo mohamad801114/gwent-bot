@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -59,6 +61,7 @@ func New(
 }
 
 func (h *Handlers) RegisterRoutes() {
+	// Public routes
 	h.bot.Handle("/start", h.OnStart)
 	h.bot.Handle("/help", h.OnHelp)
 	h.bot.Handle("/profile", h.OnProfile)
@@ -69,6 +72,13 @@ func (h *Handlers) RegisterRoutes() {
 	h.bot.Handle("/mine", h.OnMine)
 	h.bot.Handle("/chest", h.OnChest)
 	h.bot.Handle("/leader", h.OnLeader)
+
+	// Admin routes (with middleware)
+	h.bot.Handle("/admin", h.AdminMiddleware(h.OnAdmin))
+	h.bot.Handle("/admin_cards", h.AdminMiddleware(h.OnAdminCards))
+	h.bot.Handle("/admin_rarity", h.AdminMiddleware(h.OnAdminRarity))
+	h.bot.Handle("/admin_players", h.AdminMiddleware(h.OnAdminPlayers))
+	h.bot.Handle("/admin_battles", h.AdminMiddleware(h.OnAdminBattles))
 
 	h.bot.Handle(&tele.Btn{Unique: "main_menu"}, h.OnMainMenu)
 	h.bot.Handle(&tele.Btn{Unique: "battle_menu"}, h.OnBattleMenu)
@@ -90,6 +100,26 @@ func (h *Handlers) RegisterRoutes() {
 	h.bot.Handle(tele.OnCallback, h.OnCallback)
 
 	h.bot.Handle(tele.OnText, h.OnText)
+}
+
+// AdminMiddleware checks if the user is an admin
+func (h *Handlers) AdminMiddleware(next tele.HandlerFunc) tele.HandlerFunc {
+	return func(c tele.Context) error {
+		user := c.Sender()
+		if !h.isAdmin(user.ID) {
+			return c.Send(h.renderer.ErrorMessage("Admin access required"), tele.ModeHTML)
+		}
+		return next(c)
+	}
+}
+
+func (h *Handlers) isAdmin(userID int64) bool {
+	for _, adminID := range h.cfg.AdminUserIDs {
+		if adminID == userID {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *Handlers) OnStart(c tele.Context) error {
@@ -189,6 +219,20 @@ func (h *Handlers) OnDeck(c tele.Context) error {
 	}
 
 	msg := h.renderer.DeckMessage(player, deckCards)
+
+	// Send photos for each card in deck
+	for _, card := range deckCards {
+		if card.ArtURL != "" {
+			if _, err := os.Stat(card.ArtURL); err == nil {
+				photo := &tele.Photo{
+					File:    tele.FromDisk(card.ArtURL),
+					Caption: h.renderer.CardCaption(&card),
+				}
+				c.Send(photo, tele.ModeHTML)
+			}
+		}
+	}
+
 	return c.Send(msg, h.keyboardBuilder.DeckManagement(player.Deck, deckCards, 25), tele.ModeHTML)
 }
 
@@ -219,6 +263,25 @@ func (h *Handlers) OnCollection(c tele.Context) error {
 	}
 
 	msg := h.renderer.CollectionMessage(player, ownedCards, 1, 1)
+
+	// Send photos for each owned card (limit to first 10 to avoid spam)
+	count := 0
+	for _, card := range ownedCards {
+		if count >= 10 {
+			break
+		}
+		if card.ArtURL != "" {
+			if _, err := os.Stat(card.ArtURL); err == nil {
+				photo := &tele.Photo{
+					File:    tele.FromDisk(card.ArtURL),
+					Caption: h.renderer.CardCaption(&card),
+				}
+				c.Send(photo, tele.ModeHTML)
+				count++
+			}
+		}
+	}
+
 	return c.Send(msg, h.keyboardBuilder.Pagination(1, 1, "collection"), tele.ModeHTML)
 }
 
@@ -251,6 +314,66 @@ func (h *Handlers) OnShop(c tele.Context) error {
 
 	msg := h.renderer.ShopMessage(player)
 	return c.Send(msg, h.keyboardBuilder.ShopMenu(), tele.ModeHTML)
+}
+
+func (h *Handlers) OnShopCards(c tele.Context) error {
+	ctx := context.Background()
+	user := c.Sender()
+
+	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, user.ID)
+	if err != nil || player == nil {
+		return c.Send(h.renderer.NotRegisteredMessage(), tele.ModeHTML)
+	}
+
+	// Get all cards that can be bought
+	cards, err := h.cardService.GetAllCards(ctx)
+	if err != nil {
+		return c.Send(h.renderer.ErrorMessage("Failed to load shop"), tele.ModeHTML)
+	}
+
+	// Filter cards that have a cost (are buyable)
+	var buyableCards []models.Card
+	for _, card := range cards {
+		if card.CostGold > 0 || card.CostScrap > 0 {
+			buyableCards = append(buyableCards, *card)
+		}
+	}
+
+	msg := h.renderer.ShopCardsMessage(buyableCards, 1, 1)
+
+	// Send photos for first few cards
+	count := 0
+	for _, card := range buyableCards {
+		if count >= 5 {
+			break
+		}
+		if card.ArtURL != "" {
+			if _, err := os.Stat(card.ArtURL); err == nil {
+				photo := &tele.Photo{
+					File:    tele.FromDisk(card.ArtURL),
+					Caption: h.renderer.CardCaption(&card),
+				}
+				c.Send(photo, tele.ModeHTML)
+				count++
+			}
+		}
+	}
+
+	return c.Send(msg, h.keyboardBuilder.ShopCards(buyableCards, 1, 1), tele.ModeHTML)
+}
+
+func (h *Handlers) OnShopChests(c tele.Context) error {
+	ctx := context.Background()
+	user := c.Sender()
+
+	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, user.ID)
+	if err != nil || player == nil {
+		return c.Send(h.renderer.NotRegisteredMessage(), tele.ModeHTML)
+	}
+
+	chests := h.getAvailableChests(player.Level)
+	msg := h.renderer.ChestMessage(chests, player.Level)
+	return c.Send(msg, h.keyboardBuilder.ChestMenu(chests, player.Level), tele.ModeHTML)
 }
 
 func (h *Handlers) OnMine(c tele.Context) error {
@@ -392,7 +515,90 @@ func (h *Handlers) OnBattlePvP(c tele.Context) error {
 }
 
 func (h *Handlers) OnBattleFriend(c tele.Context) error {
-	return c.Send(h.renderer.InfoMessage("Friend battles coming soon!"), tele.ModeHTML)
+	return h.createFriendBattle(c)
+}
+
+func (h *Handlers) createFriendBattle(c tele.Context) error {
+	ctx := context.Background()
+	user := c.Sender()
+
+	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, user.ID)
+	if err != nil || player == nil {
+		return c.Send(h.renderer.NotRegisteredMessage(), tele.ModeHTML)
+	}
+
+	// Check if in group chat
+	chat := c.Chat()
+	if chat == nil || chat.Type != tele.ChatGroup && chat.Type != tele.ChatSuperGroup {
+		return c.Send(h.renderer.ErrorMessage("Friend battles can only be started in group chats!"), tele.ModeHTML)
+	}
+
+	// Create a friend invite that other players in the group can accept
+	msg := fmt.Sprintf(
+		"⚔️ <b>%s</b> wants to play a friendly match!\n\n"+
+			"Click the button below to accept the challenge.",
+		player.FirstName,
+	)
+
+	return c.Send(msg, h.keyboardBuilder.FriendBattleInvite(player.ID), tele.ModeHTML)
+}
+
+// Admin command handlers
+func (h *Handlers) OnAdmin(c tele.Context) error {
+	msg := `🔧 <b>Admin Panel</b>
+
+Available commands:
+/admin_cards - Manage cards
+/admin_rarity - Manage rarities
+/admin_players - View/edit players
+/admin_battles - View battles`
+
+	return c.Send(msg, tele.ModeHTML)
+}
+
+func (h *Handlers) OnAdminCards(c tele.Context) error {
+	ctx := context.Background()
+	cards, err := h.cardRepo.GetAllCards(ctx)
+	if err != nil {
+		return c.Send(h.renderer.ErrorMessage("Failed to load cards"), tele.ModeHTML)
+	}
+
+	var sb strings.Builder
+	sb.WriteString("🃏 <b>All Cards</b>\n\n")
+	for _, card := range cards {
+		sb.WriteString(fmt.Sprintf("%s %s [%s] P:%d (ID: %s)\n",
+			card.Rarity.Emoji(),
+			card.Name,
+			card.Nation.Emoji(),
+			card.Provision,
+			card.ID,
+		))
+	}
+
+	return c.Send(sb.String(), tele.ModeHTML)
+}
+
+func (h *Handlers) OnAdminRarity(c tele.Context) error {
+	msg := `🎨 <b>Rarity Management</b>
+
+Rarities available:
+• Common (⚪)
+• Rare (🔵)
+• Epic (🟣)
+• Legendary (🟡)
+
+Use /admin_cards to view cards by rarity.`
+
+	return c.Send(msg, tele.ModeHTML)
+}
+
+func (h *Handlers) OnAdminPlayers(c tele.Context) error {
+	// This would need a method to get all players
+	return c.Send(h.renderer.InfoMessage("Player management coming soon!"), tele.ModeHTML)
+}
+
+func (h *Handlers) OnAdminBattles(c tele.Context) error {
+	return c.Send(h.renderer.InfoMessage("Battle management coming soon!"), tele.ModeHTML)
 }
 
 func (h *Handlers) showBattleState(c tele.Context, b *models.Battle, player *models.Player) error {
@@ -442,6 +648,10 @@ func (h *Handlers) OnCallback(c tele.Context) error {
 
 	if strings.HasPrefix(data, "confirm_") {
 		return h.handleConfirmCallback(c, data)
+	}
+
+	if strings.HasPrefix(data, "friend_") {
+		return h.handleFriendCallback(c, data)
 	}
 
 	return nil
@@ -541,7 +751,147 @@ func (h *Handlers) handleBattleCallback(c tele.Context, data string) error {
 }
 
 func (h *Handlers) handleShopCallback(c tele.Context, data string) error {
-	return c.Send(h.renderer.InfoMessage("Shop feature coming soon!"), tele.ModeHTML)
+	ctx := context.Background()
+	user := c.Sender()
+	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, user.ID)
+	if err != nil || player == nil {
+		return c.Send(h.renderer.NotRegisteredMessage(), tele.ModeHTML)
+	}
+
+	// Parse callback data
+	if strings.HasPrefix(data, "shop_buy_card:") {
+		cardID := strings.TrimPrefix(data, "shop_buy_card:")
+		return h.buyCard(c, ctx, player, cardID)
+	}
+
+	if strings.HasPrefix(data, "shop_buy_chest:") {
+		chestID := strings.TrimPrefix(data, "shop_buy_chest:")
+		return h.buyChest(c, ctx, player, chestID)
+	}
+
+	if data == "shop_buy_axe" {
+		return h.buyAxe(c, ctx, player)
+	}
+
+	if data == "shop_cards" {
+		return h.OnShopCards(c)
+	}
+
+	if data == "shop_chests" {
+		return h.OnShopChests(c)
+	}
+
+	if data == "shop_main" {
+		return h.OnShop(c)
+	}
+
+	return nil
+}
+
+func (h *Handlers) buyCard(c tele.Context, ctx context.Context, player *models.Player, cardID string) error {
+	card, err := h.cardService.GetCard(ctx, cardID)
+	if err != nil || card == nil {
+		return c.Send(h.renderer.ErrorMessage("Card not found"), tele.ModeHTML)
+	}
+
+	// Check if player already has this card in collection
+	for _, colCard := range player.Collection {
+		if colCard.ID == cardID {
+			return c.Send(h.renderer.ErrorMessage("You already own this card!"), tele.ModeHTML)
+		}
+	}
+
+	// Check gold cost
+	if card.CostGold > 0 {
+		if player.Gold < card.CostGold {
+			return c.Send(h.renderer.ErrorMessage(fmt.Sprintf("Not enough gold! Need %d, have %d", card.CostGold, player.Gold)), tele.ModeHTML)
+		}
+		err := h.playerRepo.SpendGold(ctx, player.ID, card.CostGold)
+		if err != nil {
+			return c.Send(h.renderer.ErrorMessage("Failed to spend gold"), tele.ModeHTML)
+		}
+		player.Gold -= card.CostGold
+	}
+
+	// Check scrap cost
+	if card.CostScrap > 0 {
+		if player.Scrap < card.CostScrap {
+			return c.Send(h.renderer.ErrorMessage(fmt.Sprintf("Not enough scrap! Need %d, have %d", card.CostScrap, player.Scrap)), tele.ModeHTML)
+		}
+		err := h.playerRepo.SpendScrap(ctx, player.ID, card.CostScrap)
+		if err != nil {
+			return c.Send(h.renderer.ErrorMessage("Failed to spend scrap"), tele.ModeHTML)
+		}
+		player.Scrap -= card.CostScrap
+	}
+
+	// Add card to collection
+	err = h.playerRepo.AddCardToCollection(ctx, player.ID, cardID)
+	if err != nil {
+		return c.Send(h.renderer.ErrorMessage("Failed to add card to collection"), tele.ModeHTML)
+	}
+
+	// Send card photo
+	if card.ArtURL != "" {
+		if _, err := os.Stat(card.ArtURL); err == nil {
+			photo := &tele.Photo{
+				File:    tele.FromDisk(card.ArtURL),
+				Caption: fmt.Sprintf("✅ <b>Purchased!</b>\n\n%s", h.renderer.CardCaption(card)),
+			}
+			c.Send(photo, tele.ModeHTML)
+		}
+	}
+
+	return c.Send(h.renderer.SuccessMessage(fmt.Sprintf("Successfully purchased %s!", card.Name)), tele.ModeHTML)
+}
+
+func (h *Handlers) buyChest(c tele.Context, ctx context.Context, player *models.Player, chestID string) error {
+	chests := h.getAvailableChests(player.Level)
+	var chest *models.Chest
+	for _, ch := range chests {
+		if ch.ID == chestID {
+			chest = &ch
+			break
+		}
+	}
+
+	if chest == nil {
+		return c.Send(h.renderer.ErrorMessage("Chest not found or not available for your level"), tele.ModeHTML)
+	}
+
+	// For now, chests cost gold (could be expanded to use chest-specific currency)
+	cost := 100 // Default cost
+	if player.Gold < cost {
+		return c.Send(h.renderer.ErrorMessage(fmt.Sprintf("Not enough gold! Need %d, have %d", cost, player.Gold)), tele.ModeHTML)
+	}
+
+	err := h.playerRepo.SpendGold(ctx, player.ID, cost)
+	if err != nil {
+		return c.Send(h.renderer.ErrorMessage("Failed to spend gold"), tele.ModeHTML)
+	}
+
+	// Open chest and give rewards (simplified)
+	// In a real implementation, this would use the progression service
+	return c.Send(h.renderer.SuccessMessage(fmt.Sprintf("Purchased %s for %d gold! Chest opening coming soon.", chest.Name, cost)), tele.ModeHTML)
+}
+
+func (h *Handlers) buyAxe(c tele.Context, ctx context.Context, player *models.Player) error {
+	cost := 100
+	if player.Gold < cost {
+		return c.Send(h.renderer.ErrorMessage(fmt.Sprintf("Not enough gold! Need %d, have %d", cost, player.Gold)), tele.ModeHTML)
+	}
+
+	err := h.playerRepo.SpendGold(ctx, player.ID, cost)
+	if err != nil {
+		return c.Send(h.renderer.ErrorMessage("Failed to spend gold"), tele.ModeHTML)
+	}
+
+	durability, err := h.progressionService.ClaimAxe(ctx, player.ID)
+	if err != nil {
+		return c.Send(h.renderer.ErrorMessage(err.Error()), tele.ModeHTML)
+	}
+
+	return c.Send(h.renderer.SuccessMessage(fmt.Sprintf("Axe purchased! Durability: %d", durability)), tele.ModeHTML)
 }
 
 func (h *Handlers) handleMineCallback(c tele.Context, data string) error {
@@ -651,6 +1001,54 @@ func (h *Handlers) handleConfirmCallback(c tele.Context, data string) error {
 		h.progressionService.RecordBattleResult(ctx, player.ID, false)
 
 		return c.Send(h.renderer.ErrorMessage("You forfeited the battle!"), tele.ModeHTML)
+	}
+
+	return nil
+}
+
+func (h *Handlers) handleFriendCallback(c tele.Context, data string) error {
+	ctx := context.Background()
+	user := c.Sender()
+	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, user.ID)
+	if err != nil || player == nil {
+		return c.Send(h.renderer.NotRegisteredMessage(), tele.ModeHTML)
+	}
+
+	if strings.HasPrefix(data, "friend_accept:") {
+		inviterIDStr := strings.TrimPrefix(data, "friend_accept:")
+		inviterID, err := strconv.ParseInt(inviterIDStr, 10, 64)
+		if err != nil {
+			return c.Send(h.renderer.ErrorMessage("Invalid invite"), tele.ModeHTML)
+		}
+
+		// Check if inviter exists
+		inviter, err := h.playerRepo.GetPlayerByID(ctx, inviterID)
+		if err != nil || inviter == nil {
+			return c.Send(h.renderer.ErrorMessage("Inviter not found"), tele.ModeHTML)
+		}
+
+		// Create PvP battle between the two players
+		battle, err := h.battleService.CreatePvPBattle(ctx, inviterID, player.ID)
+		if err != nil {
+			return c.Send(h.renderer.ErrorMessage("Failed to create battle"), tele.ModeHTML)
+		}
+
+		// Send battle state to both players
+		msg := h.renderer.BattleStateMessage(battle, player.ID, player.FirstName, inviter.FirstName)
+		markup := h.keyboardBuilder.BattleAction(battle.ID, battle.CurrentTurn == player.ID, len(battle.Player1Hand) > 0, len(battle.Player1Hand))
+
+		// Send to the player who accepted
+		c.Send(msg, markup, tele.ModeHTML)
+
+		// Send to the inviter (would need to use bot.Send with chat ID in real implementation)
+		// For now, just notify the inviter
+		h.bot.Send(&tele.User{ID: inviter.TelegramID}, fmt.Sprintf("⚔️ %s accepted your challenge! Battle started.", player.FirstName), tele.ModeHTML)
+
+		return nil
+	}
+
+	if data == "friend_decline" {
+		return c.Send(h.renderer.InfoMessage("Challenge declined."), tele.ModeHTML)
 	}
 
 	return nil

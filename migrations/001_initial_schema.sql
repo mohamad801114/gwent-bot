@@ -132,6 +132,22 @@ CREATE TABLE shop_items (
 
 CREATE INDEX idx_shop_level ON shop_items(level_required);
 
+-- Insert initial shop items
+INSERT INTO shop_items (id, name, description, card_id, cost_gold, cost_scrap, stock, level_required) VALUES
+('shop_card_nr_001', 'Vernon Roche', 'Temerian commander', 'nr_001', 100, 20, -1, 1),
+('shop_card_nr_002', 'Blue Stripes Commando', 'Elite Temerian soldiers', 'nr_002', 80, 15, -1, 1),
+('shop_card_nr_003', 'Reinforced Ballista', 'Siege engine', 'nr_003', 120, 25, -1, 2),
+('shop_card_ng_001', 'Imperial Golem', 'Nilfgaardian construct', 'ng_001', 100, 20, -1, 1),
+('shop_card_ng_002', 'Viper Witcher', 'Empire''s monster slayer', 'ng_002', 200, 50, -1, 3),
+('shop_card_st_001', 'Elven Scout', 'Scoia''tael ranger', 'st_001', 80, 15, -1, 1),
+('shop_card_mo_001', 'Ghoul', 'Scavenger of the dead', 'mo_001', 80, 15, -1, 1),
+('shop_card_sy_001', 'Bounty Hunter', 'Coin for blood', 'sy_001', 80, 15, -1, 1),
+('shop_chest_starter', 'Starter Chest', 'Basic cards for new players', NULL, 500, 0, -1, 1),
+('shop_chest_novice', 'Novice Chest', 'Cards for level 1+ players', NULL, 1000, 0, -1, 1),
+('shop_chest_adept', 'Adept Chest', 'Better cards for level 2+ players', NULL, 2000, 0, -1, 2),
+('shop_axe', 'Mining Axe', 'Tool for extracting gold', NULL, 100, 0, -1, 1)
+ON CONFLICT (id) DO NOTHING;
+
 -- ============================================================================
 -- GAME SETTINGS TABLE
 -- ============================================================================

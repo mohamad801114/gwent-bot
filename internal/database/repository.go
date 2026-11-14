@@ -229,6 +229,24 @@ func (r *PlayerRepo) SpendGold(ctx context.Context, playerID int64, amount int) 
 	return nil
 }
 
+func (r *PlayerRepo) SpendScrap(ctx context.Context, playerID int64, amount int) error {
+	query := `UPDATE players SET scrap = scrap - $2, updated_at = NOW() WHERE id = $1 AND scrap >= $2`
+	result, err := r.db.Pool.Exec(ctx, query, playerID, amount)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("insufficient scrap")
+	}
+	return nil
+}
+
+func (r *PlayerRepo) AddScrap(ctx context.Context, playerID int64, amount int) error {
+	query := `UPDATE players SET scrap = scrap + $2, updated_at = NOW() WHERE id = $1`
+	_, err := r.db.Pool.Exec(ctx, query, playerID, amount)
+	return err
+}
+
 func (r *PlayerRepo) IncrementExperience(ctx context.Context, playerID int64, amount int) error {
 	query := `UPDATE players SET experience = experience + $2, updated_at = NOW() WHERE id = $1`
 	_, err := r.db.Pool.Exec(ctx, query, playerID, amount)

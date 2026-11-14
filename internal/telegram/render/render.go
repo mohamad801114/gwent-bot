@@ -2,8 +2,11 @@ package render
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
+
+	tele "gopkg.in/telebot.v3"
 
 	"gwent-bot/internal/config"
 	"gwent-bot/pkg/models"
@@ -507,4 +510,141 @@ func (r *Renderer) InfoMessage(msg string) string {
 
 func (r *Renderer) NotRegisteredMessage() string {
 	return "❌ You're not registered! Use /start to begin your journey."
+}
+
+// GetCardPhoto returns a telebot Photo for the card's art
+func (r *Renderer) GetCardPhoto(card *models.Card) (*tele.Photo, error) {
+	if card == nil || card.ArtURL == "" {
+		return nil, nil
+	}
+
+	// Check if file exists
+	if _, err := os.Stat(card.ArtURL); os.IsNotExist(err) {
+		return nil, nil
+	}
+
+	// Read the file and create a photo
+	photo := &tele.Photo{
+		File:    tele.FromDisk(card.ArtURL),
+		Caption: r.CardCaption(card),
+	}
+
+	return photo, nil
+}
+
+// CardCaption generates the caption for a card photo
+func (r *Renderer) CardCaption(card *models.Card) string {
+	cost := ""
+	if card.CostGold > 0 {
+		cost += fmt.Sprintf(" 💰%d", card.CostGold)
+	}
+	if card.CostScrap > 0 {
+		cost += fmt.Sprintf(" 💎%d", card.CostScrap)
+	}
+
+	return fmt.Sprintf(
+		"<b>%s %s</b> [%s] P:%d%s\n\n%s\n\n%s",
+		card.Rarity.Emoji(),
+		card.Name,
+		card.Nation.Emoji(),
+		card.Provision,
+		cost,
+		card.Description,
+		card.FlavorText,
+	)
+}
+
+// SendCardPhoto sends a card photo with caption to the chat
+func (r *Renderer) SendCardPhoto(c tele.Context, card *models.Card) error {
+	photo, err := r.GetCardPhoto(card)
+	if err != nil || photo == nil {
+		// Fallback to text message if no photo
+		msg := r.CardCaption(card)
+		return c.Send(msg, tele.ModeHTML)
+	}
+	return c.Send(photo, tele.ModeHTML)
+}
+
+// BattleStateMessageWithPhoto returns battle state message and optionally a card photo
+func (r *Renderer) BattleStateMessageWithPhoto(b *models.Battle, playerID int64, playerName string, opponentName string) (string, *tele.Photo) {
+	isPlayer1 := b.Player1ID == playerID
+
+	var myBoard, oppBoard *models.BoardState
+	var myHand, oppHand []models.CardInstance
+	var myLeaderUsed, oppLeaderUsed bool
+	var myPassed, oppPassed bool
+	var myTurn bool
+
+	if isPlayer1 {
+		myBoard = &b.Player1Board
+		oppBoard = &b.Player2Board
+		myHand = b.Player1Hand
+		oppHand = b.Player2Hand
+		myLeaderUsed = b.Player1LeaderUsed
+		oppLeaderUsed = b.Player2LeaderUsed
+		myPassed = b.Player1Passed
+		oppPassed = b.Player2Passed
+		myTurn = b.CurrentTurn == b.Player1ID
+	} else {
+		myBoard = &b.Player2Board
+		oppBoard = &b.Player1Board
+		myHand = b.Player2Hand
+		oppHand = b.Player1Hand
+		myLeaderUsed = b.Player2LeaderUsed
+		oppLeaderUsed = b.Player1LeaderUsed
+		myPassed = b.Player2Passed
+		oppPassed = b.Player1Passed
+		myTurn = b.CurrentTurn == b.Player2ID
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("⚔️ <b>Battle</b> | Round %d/3 | %s\n\n",
+		b.CurrentRound,
+		b.PhaseDisplay(),
+	))
+
+	sb.WriteString(fmt.Sprintf("👤 <b>%s</b> (Power: %d)%s\n",
+		opponentName,
+		oppBoard.TotalPower,
+		ternary(oppPassed, " ⏭️ PASSED", ""),
+	))
+	sb.WriteString(r.renderBoard(oppBoard, false))
+	sb.WriteString(fmt.Sprintf("Hand: %d cards%s\n\n",
+		len(oppHand),
+		ternary(oppLeaderUsed, " | Leader: ✅ Used", " | Leader: ⭐ Ready"),
+	))
+
+	if b.Weather.Active != "clear" {
+		sb.WriteString(fmt.Sprintf("🌤️ <b>Weather:</b> %s (%d rounds)\n\n",
+			b.Weather.Display(),
+			b.Weather.Duration,
+		))
+	}
+
+	sb.WriteString(fmt.Sprintf("👤 <b>%s</b> (Power: %d)%s\n",
+		playerName,
+		myBoard.TotalPower,
+		ternary(myPassed, " ⏭️ PASSED", ""),
+	))
+	sb.WriteString(r.renderBoard(myBoard, true))
+	sb.WriteString(fmt.Sprintf("Hand: %d cards%s\n",
+		len(myHand),
+		ternary(myLeaderUsed, " | Leader: ✅ Used", " | Leader: ⭐ Ready"),
+	))
+
+	if myTurn {
+		sb.WriteString("\n🎯 <b>YOUR TURN</b> - Play a card or Pass!")
+	} else {
+		sb.WriteString("\n⏳ Opponent's turn...")
+	}
+
+	// Return the message and optionally a photo of the last played card
+	// This is just a placeholder - the actual card photo would be sent separately
+	return sb.String(), nil
+}
+
+// GetCardPhotoByID returns a telebot Photo for a card by ID
+func (r *Renderer) GetCardPhotoByID(cardID string) (*tele.Photo, error) {
+	// This would need access to card service - kept for reference
+	return nil, nil
 }

@@ -20,6 +20,9 @@ type Config struct {
 	RedisURL       string
 	RedisEnabled   bool
 
+	// Admin
+	AdminUserIDs []int64
+
 	// Game special words
 	StartWord         string
 	DailyCoinWord     string
@@ -59,6 +62,8 @@ func Load() (*Config, error) {
 		RedisURL:       getEnv("REDIS_URL", ""),
 		RedisEnabled:   getEnvBool("REDIS_ENABLED", false),
 
+		AdminUserIDs: parseAdminIDs(getEnv("ADMIN_USER_IDS", "")),
+
 		StartWord:         getEnv("START_WORD", "gwentstart"),
 		DailyCoinWord:     getEnv("DAILY_COIN_WORD", "goldmine"),
 		AxeWord:           getEnv("AXE_WORD", "sharpaxe"),
@@ -82,6 +87,21 @@ func Load() (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func parseAdminIDs(s string) []int64 {
+	if s == "" {
+		return []int64{}
+	}
+	parts := strings.Split(s, ",")
+	var ids []int64
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if id, err := strconv.ParseInt(p, 10, 64); err == nil {
+			ids = append(ids, id)
+		}
+	}
+	return ids
 }
 
 func getEnv(key, defaultValue string) string {

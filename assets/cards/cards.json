@@ -19,7 +19,7 @@
           "conditions": {"has_machine": 4}
         }
       ],
-      "art_url": "",
+      "art_url": "assets/images/Vernon Roche.jpg",
       "flavor_text": "\"Temeria will not fall while I draw breath.\""
     },
     {
@@ -46,7 +46,7 @@
           "conditions": {"cooldown": 2}
         }
       ],
-      "art_url": "",
+      "art_url": "assets/images/Blue Stripes Commando.jpg",
       "flavor_text": "Elite Temerian soldiers, loyal to Roche."
     },
     {
@@ -68,7 +68,7 @@
           "conditions": {"cooldown": 1}
         }
       ],
-      "art_url": "",
+      "art_url": "assets/images/Balista.jpg",
       "flavor_text": "A siege engine designed to punch through armor."
     },
     {
@@ -90,7 +90,7 @@
           "conditions": {"opponent_empty": 5}
         }
       ],
-      "art_url": "",
+      "art_url": "assets/images/Vattier de Rideaux.jpg",
       "flavor_text": "Machines know no fear, only orders."
     },
     {
@@ -112,7 +112,7 @@
           "conditions": {"target_machine": "destroy"}
         }
       ],
-      "art_url": "",
+      "art_url": "assets/images/Stefan Skellen.jpg",
       "flavor_text": "\"The Empire pays well for monster slayers.\""
     },
     {
@@ -139,7 +139,7 @@
           "conditions": {"cooldown": 2}
         }
       ],
-      "art_url": "",
+      "art_url": "assets/images/Toruviel.jpg",
       "flavor_text": "Swift and silent, they strike where least expected."
     },
     {
@@ -160,7 +160,7 @@
           "value": 0
         }
       ],
-      "art_url": "",
+      "art_url": "assets/images/Grave Hag.jpg",
       "flavor_text": "They feast on the fallen, growing stronger with each meal."
     },
     {
@@ -187,7 +187,7 @@
           "conditions": {"cost": 3, "cooldown": 1}
         }
       ],
-      "art_url": "",
+      "art_url": "assets/images/Havekar Smuggler.jpg",
       "flavor_text": "\"Every head has a price. Yours included.\""
     },
     {
@@ -209,7 +209,7 @@
           "conditions": {"cooldown": 1, "charges": 2}
         }
       ],
-      "art_url": "",
+      "art_url": "assets/images/Esterad Thyssen.jpg",
       "flavor_text": "\"The North remembers. And it strikes back.\""
     },
     {
@@ -231,7 +231,7 @@
           "conditions": {"max_power": 4, "cooldown": 2, "charges": 1}
         }
       ],
-      "art_url": "",
+      "art_url": "assets/images/Morvran voorhis.jpg",
       "flavor_text": "\"An empire is built on the backs of those who serve it.\""
     },
     {
@@ -253,7 +253,7 @@
           "conditions": {"cooldown": 2, "charges": 1}
         }
       ],
-      "art_url": "",
+      "art_url": "assets/images/Filavandrel aen.jpg",
       "flavor_text": "\"Freedom is not given. It is taken.\""
     },
     {
@@ -275,7 +275,7 @@
           "conditions": {"weather": "frost", "duration": 2, "cooldown": 2, "charges": 1}
         }
       ],
-      "art_url": "",
+      "art_url": "assets/images/Ice Giant.jpg",
       "flavor_text": "\"Winter comes for us all.\""
     },
     {
@@ -297,7 +297,7 @@
           "conditions": {"cooldown": 2, "charges": 1}
         }
       ],
-      "art_url": "",
+      "art_url": "assets/images/Sigismund dijkstra.jpg",
       "flavor_text": "\"Information is the most valuable currency.\""
     }
   ]

@@ -245,6 +245,17 @@ func (k *KeyboardBuilder) Confirm(action, data string) *tele.ReplyMarkup {
 	return markup
 }
 
+func (k *KeyboardBuilder) FriendBattleInvite(inviterID int64) *tele.ReplyMarkup {
+	markup := &tele.ReplyMarkup{}
+
+	btnAccept := markup.Data("âœ… Accept Challenge", "friend_accept:"+strconv.FormatInt(inviterID, 10))
+	btnDecline := markup.Data("âŒ Decline", "friend_decline")
+
+	markup.Row(btnAccept, btnDecline)
+
+	return markup
+}
+
 func (k *KeyboardBuilder) Pagination(currentPage, totalPages int, prefix string) *tele.ReplyMarkup {
 	markup := &tele.ReplyMarkup{}
 
