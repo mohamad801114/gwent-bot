@@ -73,6 +73,22 @@ func main() {
 		log.Fatalf("Failed to create bot: %v", err)
 	}
 
+	// Debug middleware to log all updates
+	bot.Use(func(next tele.HandlerFunc) tele.HandlerFunc {
+		return func(c tele.Context) error {
+			update := c.Update()
+			// Update is a struct, check if it has meaningful data
+			if update.Message != nil || update.Callback != nil || update.Query != nil {
+				log.Printf("DEBUG: Message: %v, Callback: %v, Query: %v",
+					func() string { if update.Message != nil { return "msg" } else { return "nil" } }(),
+					func() string { if update.Callback != nil { return "cb:" + update.Callback.Data } else { return "nil" } }(),
+					func() string { if update.Query != nil { return "query" } else { return "nil" } }(),
+				)
+			}
+			return next(c)
+		}
+	})
+
 	h := handlers.New(
 		bot,
 		playerRepo,

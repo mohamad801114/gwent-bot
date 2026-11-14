@@ -52,6 +52,7 @@ services:
       DB_MIN_CONNS: ${DB_MIN_CONNS:-5}
       REDIS_URL: redis://redis:6379/0
       REDIS_ENABLED: ${REDIS_ENABLED:-false}
+      ADMIN_USER_IDS: ${ADMIN_USER_IDS}
       START_WORD: ${START_WORD:-gwentstart}
       DAILY_COIN_WORD: ${DAILY_COIN_WORD:-goldmine}
       AXE_WORD: ${AXE_WORD:-sharpaxe}
