@@ -311,14 +311,13 @@ func (r *Renderer) renderBoard(board *models.BoardState, showDetails bool) strin
 				sb.WriteString(" | ")
 			}
 			powerStr := fmt.Sprintf("%d", card.Power)
-			if card.Boosted > 0 {
-				powerStr = fmt.Sprintf("%d🟢", card.Power)
-			}
-			if card.Damaged > 0 {
-				powerStr = fmt.Sprintf("%d🔴", card.Power)
-			}
-			if card.Armor > 0 {
-				powerStr += fmt.Sprintf("🛡️%d", card.Armor)
+			// Show base power if different (damaged/boosted)
+			if card.Power != card.BasePower {
+				if card.Power > card.BasePower {
+					powerStr = fmt.Sprintf("%d🟢(%d)", card.Power, card.BasePower)
+				} else {
+					powerStr = fmt.Sprintf("%d🔴(%d)", card.Power, card.BasePower)
+				}
 			}
 			for _, status := range card.Statuses {
 				powerStr += " " + status.Emoji()
@@ -440,7 +439,7 @@ func (r *Renderer) ChestMessage(chests []models.Chest, playerLevel models.Player
 
 	for _, chest := range chests {
 		status := "🔒"
-		if chest.LevelRequired <= playerLevel {
+		if chest.LevelRequired <= int(playerLevel) {
 			status = "🔓"
 		}
 		sb.WriteString(fmt.Sprintf("%s <b>%s</b> (Level %d+)\n", status, chest.Name, chest.LevelRequired))

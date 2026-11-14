@@ -738,8 +738,9 @@ func (h *Handlers) getAvailableChests(level models.PlayerLevel) []models.Chest {
 	}
 
 	var available []models.Chest
+	playerLevel := int(level)
 	for _, chest := range allChests {
-		if chest.LevelRequired <= level {
+		if chest.LevelRequired <= playerLevel {
 			available = append(available, chest)
 		}
 	}

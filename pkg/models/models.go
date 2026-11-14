@@ -158,17 +158,14 @@ type Card struct {
 type CardInstance struct {
 	CardID     string     `json:"card_id"`
 	InstanceID string     `json:"instance_id"`
-	Power      int        `json:"power"`
-	BasePower  int        `json:"base_power"`
-	Armor      int        `json:"armor"`
-	Boosted    int        `json:"boosted"`
-	Damaged    int        `json:"damaged"`
+	Power      int        `json:"power"`       // Current power (changes during battle)
+	BasePower  int        `json:"base_power"`  // Original power (for reset/muster)
 	Row        RowType    `json:"row"`
 	OwnerID    int64      `json:"owner_id"`
 	IsHero     bool       `json:"is_hero"`
-	Abilities  []string   `json:"abilities"`
-	Statuses   []Status   `json:"statuses"`
-	Card       *Card      `json:"-"` // Reference to base card (not serialized)
+	Abilities  []string   `json:"abilities"`   // Keywords: spy, medic, morale, tight_bond, muster, etc.
+	Statuses   []Status   `json:"statuses"`    // Weather, boost, damage, etc.
+	Card       *Card      `json:"-"`           // Reference to base card (not serialized)
 }
 
 type Status struct {

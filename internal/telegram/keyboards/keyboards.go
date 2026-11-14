@@ -201,7 +201,7 @@ func (k *KeyboardBuilder) ChestMenu(chests []models.Chest, playerLevel models.Pl
 	markup := &tele.ReplyMarkup{ResizeKeyboard: true}
 
 	for _, chest := range chests {
-		if chest.LevelRequired <= playerLevel {
+		if chest.LevelRequired <= int(playerLevel) {
 			btn := markup.Data(
 				chest.Name+" ("+chest.Cooldown.String()+")",
 				"chest_open:"+chest.ID,

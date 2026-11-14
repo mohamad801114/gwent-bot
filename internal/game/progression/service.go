@@ -163,7 +163,7 @@ func (s *Service) OpenChest(ctx context.Context, playerID int64, chestID string)
 		return nil, 0, ErrChestNotFound
 	}
 
-	if chest.LevelRequired > player.Level {
+	if chest.LevelRequired > int(player.Level) {
 		return nil, 0, ErrLevelTooLow
 	}
 
