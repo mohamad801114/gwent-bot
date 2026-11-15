@@ -126,7 +126,9 @@ func (h *Handlers) isAdmin(userID int64) bool {
 // answerCallback answers the callback query to remove loading state
 func (h *Handlers) answerCallback(c tele.Context) {
 	if cb := c.Callback(); cb != nil {
-		_ = c.Bot().Respond(cb, &tele.CallbackResponse{Text: ""})
+		if err := c.Bot().Respond(cb, &tele.CallbackResponse{Text: ""}); err != nil {
+			log.Printf("ERROR: Failed to answer callback query in answerCallback: %v", err)
+		}
 	}
 }
 
@@ -646,9 +648,11 @@ func (h *Handlers) OnCallback(c tele.Context) error {
 	cb := c.Callback()
 	if cb != nil {
 		// Answer callback query to remove loading state
-		_ = c.Bot().Respond(cb, &tele.CallbackResponse{
+		if err := c.Bot().Respond(cb, &tele.CallbackResponse{
 			Text: "",
-		})
+		}); err != nil {
+			log.Printf("ERROR: Failed to answer callback query: %v", err)
+		}
 	}
 
 	data := cb.Data
