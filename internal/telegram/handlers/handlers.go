@@ -301,6 +301,9 @@ func (h *Handlers) OnBattle(c tele.Context) error {
 
 	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, user.ID)
 	if err != nil || player == nil {
+		if c.Callback() != nil {
+			return c.Edit(h.renderer.NotRegisteredMessage(), h.keyboardBuilder.MainMenu(), tele.ModeHTML)
+		}
 		return c.Send(h.renderer.NotRegisteredMessage(), tele.ModeHTML)
 	}
 
@@ -309,7 +312,10 @@ func (h *Handlers) OnBattle(c tele.Context) error {
 		return h.showBattleState(c, activeBattle, player)
 	}
 
-	msg := "âš”ï¸ <b>Battle Menu</b>\n\nChoose your battle type:"
+	msg := "⚔️ <b>Battle Menu</b>\n\nChoose your battle type:"
+	if c.Callback() != nil {
+		return c.Edit(msg, h.keyboardBuilder.BattleMenu(), tele.ModeHTML)
+	}
 	return c.Send(msg, h.keyboardBuilder.BattleMenu(), tele.ModeHTML)
 }
 
@@ -319,10 +325,16 @@ func (h *Handlers) OnShop(c tele.Context) error {
 
 	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, user.ID)
 	if err != nil || player == nil {
+		if c.Callback() != nil {
+			return c.Edit(h.renderer.NotRegisteredMessage(), h.keyboardBuilder.MainMenu(), tele.ModeHTML)
+		}
 		return c.Send(h.renderer.NotRegisteredMessage(), tele.ModeHTML)
 	}
 
 	msg := h.renderer.ShopMessage(player)
+	if c.Callback() != nil {
+		return c.Edit(msg, h.keyboardBuilder.ShopMenu(), tele.ModeHTML)
+	}
 	return c.Send(msg, h.keyboardBuilder.ShopMenu(), tele.ModeHTML)
 }
 
@@ -334,7 +346,7 @@ func (h *Handlers) OnShopCards(c tele.Context) error {
 	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, user.ID)
 	if err != nil || player == nil {
 		log.Printf("DEBUG OnShopCards: player not found, err=%v", err)
-		return c.Send(h.renderer.NotRegisteredMessage(), tele.ModeHTML)
+		return c.Edit(h.renderer.NotRegisteredMessage(), h.keyboardBuilder.MainMenu(), tele.ModeHTML)
 	}
 
 	log.Printf("DEBUG OnShopCards: player found, id=%d", player.ID)
@@ -343,7 +355,7 @@ func (h *Handlers) OnShopCards(c tele.Context) error {
 	cards, err := h.cardService.GetAllCards(ctx)
 	if err != nil {
 		log.Printf("DEBUG OnShopCards: GetAllCards error: %v", err)
-		return c.Send(h.renderer.ErrorMessage("Failed to load shop"), tele.ModeHTML)
+		return c.Edit(h.renderer.ErrorMessage("Failed to load shop"), h.keyboardBuilder.ShopMenu(), tele.ModeHTML)
 	}
 
 	log.Printf("DEBUG OnShopCards: got %d cards", len(cards))
@@ -361,7 +373,7 @@ func (h *Handlers) OnShopCards(c tele.Context) error {
 	msg := h.renderer.ShopCardsMessage(buyableCards, 1, 1)
 	log.Printf("DEBUG OnShopCards: sending message and keyboard")
 
-	// Send photos for first few cards
+	// Send photos for first few cards (non-blocking)
 	count := 0
 	for _, card := range buyableCards {
 		if count >= 5 {
@@ -383,9 +395,10 @@ func (h *Handlers) OnShopCards(c tele.Context) error {
 		}
 	}
 
-	err = c.Send(msg, h.keyboardBuilder.ShopCards(buyableCards, 1, 1), tele.ModeHTML)
+	// Edit the callback message with shop cards
+	err = c.Edit(msg, h.keyboardBuilder.ShopCards(buyableCards, 1, 1), tele.ModeHTML)
 	if err != nil {
-		log.Printf("DEBUG OnShopCards: failed to send message: %v", err)
+		log.Printf("DEBUG OnShopCards: failed to edit message: %v", err)
 	}
 	log.Printf("DEBUG OnShopCards: done")
 	return err
@@ -399,15 +412,15 @@ func (h *Handlers) OnShopChests(c tele.Context) error {
 	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, user.ID)
 	if err != nil || player == nil {
 		log.Printf("DEBUG OnShopChests: player not found")
-		return c.Send(h.renderer.NotRegisteredMessage(), tele.ModeHTML)
+		return c.Edit(h.renderer.NotRegisteredMessage(), h.keyboardBuilder.MainMenu(), tele.ModeHTML)
 	}
 
 	chests := h.getAvailableChests(player.Level)
 	log.Printf("DEBUG OnShopChests: %d chests available", len(chests))
 	msg := h.renderer.ChestMessage(chests, player.Level)
-	err = c.Send(msg, h.keyboardBuilder.ChestMenu(chests, player.Level), tele.ModeHTML)
+	err = c.Edit(msg, h.keyboardBuilder.ChestMenu(chests, player.Level), tele.ModeHTML)
 	if err != nil {
-		log.Printf("DEBUG OnShopChests: send error: %v", err)
+		log.Printf("DEBUG OnShopChests: edit error: %v", err)
 	}
 	log.Printf("DEBUG OnShopChests: done")
 	return err
@@ -419,10 +432,16 @@ func (h *Handlers) OnMine(c tele.Context) error {
 
 	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, user.ID)
 	if err != nil || player == nil {
+		if c.Callback() != nil {
+			return c.Edit(h.renderer.NotRegisteredMessage(), h.keyboardBuilder.MainMenu(), tele.ModeHTML)
+		}
 		return c.Send(h.renderer.NotRegisteredMessage(), tele.ModeHTML)
 	}
 
 	msg := h.renderer.MineMessage(player, h.cfg)
+	if c.Callback() != nil {
+		return c.Edit(msg, h.keyboardBuilder.MineMenu(player.MineUnlocked, h.cfg.MineMaxExtracts-player.MineExtractsToday, player.AxeDurability), tele.ModeHTML)
+	}
 	return c.Send(msg, h.keyboardBuilder.MineMenu(player.MineUnlocked, h.cfg.MineMaxExtracts-player.MineExtractsToday, player.AxeDurability), tele.ModeHTML)
 }
 
@@ -432,11 +451,17 @@ func (h *Handlers) OnChest(c tele.Context) error {
 
 	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, user.ID)
 	if err != nil || player == nil {
+		if c.Callback() != nil {
+			return c.Edit(h.renderer.NotRegisteredMessage(), h.keyboardBuilder.MainMenu(), tele.ModeHTML)
+		}
 		return c.Send(h.renderer.NotRegisteredMessage(), tele.ModeHTML)
 	}
 
 	chests := h.getAvailableChests(player.Level)
 	msg := h.renderer.ChestMessage(chests, player.Level)
+	if c.Callback() != nil {
+		return c.Edit(msg, h.keyboardBuilder.ChestMenu(chests, player.Level), tele.ModeHTML)
+	}
 	return c.Send(msg, h.keyboardBuilder.ChestMenu(chests, player.Level), tele.ModeHTML)
 }
 
@@ -446,11 +471,17 @@ func (h *Handlers) OnLeader(c tele.Context) error {
 
 	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, user.ID)
 	if err != nil || player == nil {
+		if c.Callback() != nil {
+			return c.Edit(h.renderer.NotRegisteredMessage(), h.keyboardBuilder.MainMenu(), tele.ModeHTML)
+		}
 		return c.Send(h.renderer.NotRegisteredMessage(), tele.ModeHTML)
 	}
 
 	leadersPtr, err := h.cardRepo.GetCardsByType(ctx, models.CardTypeLeader)
 	if err != nil {
+		if c.Callback() != nil {
+			return c.Edit(h.renderer.ErrorMessage("Failed to load leaders"), h.keyboardBuilder.MainMenu(), tele.ModeHTML)
+		}
 		return c.Send(h.renderer.ErrorMessage("Failed to load leaders"), tele.ModeHTML)
 	}
 
@@ -463,6 +494,9 @@ func (h *Handlers) OnLeader(c tele.Context) error {
 	}
 
 	msg := h.renderer.LeaderMessage(leaders, player.LeaderID)
+	if c.Callback() != nil {
+		return c.Edit(msg, h.keyboardBuilder.LeaderSelection(leaders, player.LeaderID), tele.ModeHTML)
+	}
 	return c.Send(msg, h.keyboardBuilder.LeaderSelection(leaders, player.LeaderID), tele.ModeHTML)
 }
 
