@@ -22,6 +22,7 @@ CREATE TABLE players (
     gold BIGINT NOT NULL DEFAULT 100,
     scrap BIGINT NOT NULL DEFAULT 0,
     meteorite_powder BIGINT NOT NULL DEFAULT 0,
+    leader_id VARCHAR(100),
     leader_ability VARCHAR(100),           -- passive leader ability
     cards_won INT NOT NULL DEFAULT 0,
     opponents_defeated JSONB NOT NULL DEFAULT '[]'::jsonb,
