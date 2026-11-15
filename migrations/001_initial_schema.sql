@@ -121,7 +121,7 @@ CREATE TABLE shop_items (
     id VARCHAR(100) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    card_id VARCHAR(100) REFERENCES cards(id),
+    card_id VARCHAR(100),  -- FK removed: cards are seeded in later migrations
     cost_gold BIGINT NOT NULL DEFAULT 0,
     cost_scrap BIGINT NOT NULL DEFAULT 0,
     stock INT NOT NULL DEFAULT -1,
@@ -132,7 +132,7 @@ CREATE TABLE shop_items (
 
 CREATE INDEX idx_shop_level ON shop_items(level_required);
 
--- Insert initial shop items
+-- Insert initial shop items (card_ids will exist after migration 002/003)
 INSERT INTO shop_items (id, name, description, card_id, cost_gold, cost_scrap, stock, level_required) VALUES
 ('shop_card_nr_001', 'Vernon Roche', 'Temerian commander', 'nr_001', 100, 20, -1, 1),
 ('shop_card_nr_002', 'Blue Stripes Commando', 'Elite Temerian soldiers', 'nr_002', 80, 15, -1, 1),
