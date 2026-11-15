@@ -16,6 +16,10 @@ ALTER TABLE cards ADD COLUMN IF NOT EXISTS is_hero BOOLEAN NOT NULL DEFAULT FALS
 ALTER TABLE cards ADD COLUMN IF NOT EXISTS faction VARCHAR(50);        -- northern_realms, nilfgaard, scoiatael, monsters, neutral
 ALTER TABLE cards ADD COLUMN IF NOT EXISTS card_group VARCHAR(50);     -- close, ranged, siege, special, hero
 
+-- Make legacy NOT NULL columns nullable (new schema uses faction instead of nation)
+ALTER TABLE cards ALTER COLUMN nation DROP NOT NULL;
+ALTER TABLE cards ALTER COLUMN rarity DROP NOT NULL;
+
 -- Simplify players table for mini-gwent progression
 ALTER TABLE players DROP COLUMN IF EXISTS scrap;
 ALTER TABLE players DROP COLUMN IF EXISTS meteorite_powder;
