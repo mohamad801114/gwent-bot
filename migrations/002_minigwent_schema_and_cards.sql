@@ -40,12 +40,16 @@ UPDATE battles SET
     player2_deck = (SELECT jsonb_agg(jsonb_strip_nulls(elem - 'armor')) FROM jsonb_array_elements(player2_deck) elem),
     player1_graveyard = (SELECT jsonb_agg(jsonb_strip_nulls(elem - 'armor')) FROM jsonb_array_elements(player1_graveyard) elem),
     player2_graveyard = (SELECT jsonb_agg(jsonb_strip_nulls(elem - 'armor')) FROM jsonb_array_elements(player2_graveyard) elem),
-    player1_board = jsonb_set(player1_board, '{melee}', (SELECT jsonb_agg(jsonb_strip_nulls(elem - 'armor')) FROM jsonb_array_elements(player1_board->'melee') elem)),
-    player1_board = jsonb_set(player1_board, '{ranged}', (SELECT jsonb_agg(jsonb_strip_nulls(elem - 'armor')) FROM jsonb_array_elements(player1_board->'ranged') elem)),
-    player1_board = jsonb_set(player1_board, '{siege}', (SELECT jsonb_agg(jsonb_strip_nulls(elem - 'armor')) FROM jsonb_array_elements(player1_board->'siege') elem)),
-    player2_board = jsonb_set(player2_board, '{melee}', (SELECT jsonb_agg(jsonb_strip_nulls(elem - 'armor')) FROM jsonb_array_elements(player2_board->'melee') elem)),
-    player2_board = jsonb_set(player2_board, '{ranged}', (SELECT jsonb_agg(jsonb_strip_nulls(elem - 'armor')) FROM jsonb_array_elements(player2_board->'ranged') elem)),
-    player2_board = jsonb_set(player2_board, '{siege}', (SELECT jsonb_agg(jsonb_strip_nulls(elem - 'armor')) FROM jsonb_array_elements(player2_board->'siege') elem));
+    player1_board = jsonb_set(
+        jsonb_set(
+            jsonb_set(player1_board, '{melee}', (SELECT jsonb_agg(jsonb_strip_nulls(elem - 'armor')) FROM jsonb_array_elements(player1_board->'melee') elem)),
+        '{ranged}', (SELECT jsonb_agg(jsonb_strip_nulls(elem - 'armor')) FROM jsonb_array_elements(player1_board->'ranged') elem)),
+    '{siege}', (SELECT jsonb_agg(jsonb_strip_nulls(elem - 'armor')) FROM jsonb_array_elements(player1_board->'siege') elem)),
+    player2_board = jsonb_set(
+        jsonb_set(
+            jsonb_set(player2_board, '{melee}', (SELECT jsonb_agg(jsonb_strip_nulls(elem - 'armor')) FROM jsonb_array_elements(player2_board->'melee') elem)),
+        '{ranged}', (SELECT jsonb_agg(jsonb_strip_nulls(elem - 'armor')) FROM jsonb_array_elements(player2_board->'ranged') elem)),
+    '{siege}', (SELECT jsonb_agg(jsonb_strip_nulls(elem - 'armor')) FROM jsonb_array_elements(player2_board->'siege') elem));
 
 -- Keywords reference table
 CREATE TABLE IF NOT EXISTS minigwent_keywords (
