@@ -327,19 +327,26 @@ func (h *Handlers) OnShop(c tele.Context) error {
 }
 
 func (h *Handlers) OnShopCards(c tele.Context) error {
+	log.Printf("DEBUG OnShopCards: started")
 	ctx := context.Background()
 	user := c.Sender()
 
 	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, user.ID)
 	if err != nil || player == nil {
+		log.Printf("DEBUG OnShopCards: player not found, err=%v", err)
 		return c.Send(h.renderer.NotRegisteredMessage(), tele.ModeHTML)
 	}
+
+	log.Printf("DEBUG OnShopCards: player found, id=%d", player.ID)
 
 	// Get all cards that can be bought
 	cards, err := h.cardService.GetAllCards(ctx)
 	if err != nil {
+		log.Printf("DEBUG OnShopCards: GetAllCards error: %v", err)
 		return c.Send(h.renderer.ErrorMessage("Failed to load shop"), tele.ModeHTML)
 	}
+
+	log.Printf("DEBUG OnShopCards: got %d cards", len(cards))
 
 	// Filter cards that have a cost (are buyable)
 	var buyableCards []models.Card
@@ -349,7 +356,10 @@ func (h *Handlers) OnShopCards(c tele.Context) error {
 		}
 	}
 
+	log.Printf("DEBUG OnShopCards: %d buyable cards", len(buyableCards))
+
 	msg := h.renderer.ShopCardsMessage(buyableCards, 1, 1)
+	log.Printf("DEBUG OnShopCards: sending message and keyboard")
 
 	// Send photos for first few cards
 	count := 0
@@ -363,27 +373,44 @@ func (h *Handlers) OnShopCards(c tele.Context) error {
 					File:    tele.FromDisk(card.ArtURL),
 					Caption: h.renderer.CardCaption(&card),
 				}
-				c.Send(photo, tele.ModeHTML)
+				if err := c.Send(photo, tele.ModeHTML); err != nil {
+					log.Printf("DEBUG OnShopCards: failed to send photo: %v", err)
+				}
 				count++
+			} else {
+				log.Printf("DEBUG OnShopCards: art file not found: %s", card.ArtURL)
 			}
 		}
 	}
 
-	return c.Send(msg, h.keyboardBuilder.ShopCards(buyableCards, 1, 1), tele.ModeHTML)
+	err = c.Send(msg, h.keyboardBuilder.ShopCards(buyableCards, 1, 1), tele.ModeHTML)
+	if err != nil {
+		log.Printf("DEBUG OnShopCards: failed to send message: %v", err)
+	}
+	log.Printf("DEBUG OnShopCards: done")
+	return err
 }
 
 func (h *Handlers) OnShopChests(c tele.Context) error {
+	log.Printf("DEBUG OnShopChests: started")
 	ctx := context.Background()
 	user := c.Sender()
 
 	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, user.ID)
 	if err != nil || player == nil {
+		log.Printf("DEBUG OnShopChests: player not found")
 		return c.Send(h.renderer.NotRegisteredMessage(), tele.ModeHTML)
 	}
 
 	chests := h.getAvailableChests(player.Level)
+	log.Printf("DEBUG OnShopChests: %d chests available", len(chests))
 	msg := h.renderer.ChestMessage(chests, player.Level)
-	return c.Send(msg, h.keyboardBuilder.ChestMenu(chests, player.Level), tele.ModeHTML)
+	err = c.Send(msg, h.keyboardBuilder.ChestMenu(chests, player.Level), tele.ModeHTML)
+	if err != nil {
+		log.Printf("DEBUG OnShopChests: send error: %v", err)
+	}
+	log.Printf("DEBUG OnShopChests: done")
+	return err
 }
 
 func (h *Handlers) OnMine(c tele.Context) error {
@@ -805,40 +832,51 @@ func (h *Handlers) handleBattleCallback(c tele.Context, data string) error {
 }
 
 func (h *Handlers) handleShopCallback(c tele.Context, data string) error {
+	log.Printf("DEBUG handleShopCallback: data=%s", data)
 	ctx := context.Background()
 	user := c.Sender()
 	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, user.ID)
 	if err != nil || player == nil {
+		log.Printf("DEBUG handleShopCallback: player not found, err=%v", err)
 		return c.Send(h.renderer.NotRegisteredMessage(), tele.ModeHTML)
 	}
+
+	log.Printf("DEBUG handleShopCallback: player found, id=%d", player.ID)
 
 	// Parse callback data
 	if strings.HasPrefix(data, "shop_buy_card:") {
 		cardID := strings.TrimPrefix(data, "shop_buy_card:")
+		log.Printf("DEBUG handleShopCallback: buying card %s", cardID)
 		return h.buyCard(c, ctx, player, cardID)
 	}
 
 	if strings.HasPrefix(data, "shop_buy_chest:") {
 		chestID := strings.TrimPrefix(data, "shop_buy_chest:")
+		log.Printf("DEBUG handleShopCallback: buying chest %s", chestID)
 		return h.buyChest(c, ctx, player, chestID)
 	}
 
 	if data == "shop_axe" {
+		log.Printf("DEBUG handleShopCallback: buying axe")
 		return h.buyAxe(c, ctx, player)
 	}
 
 	if data == "shop_cards" {
+		log.Printf("DEBUG handleShopCallback: showing shop cards")
 		return h.OnShopCards(c)
 	}
 
 	if data == "shop_chests" {
+		log.Printf("DEBUG handleShopCallback: showing shop chests")
 		return h.OnShopChests(c)
 	}
 
 	if data == "shop_main" {
+		log.Printf("DEBUG handleShopCallback: back to shop main")
 		return h.OnShop(c)
 	}
 
+	log.Printf("DEBUG handleShopCallback: unknown data %s", data)
 	return nil
 }
 
@@ -930,22 +968,31 @@ func (h *Handlers) buyChest(c tele.Context, ctx context.Context, player *models.
 }
 
 func (h *Handlers) buyAxe(c tele.Context, ctx context.Context, player *models.Player) error {
+	log.Printf("DEBUG buyAxe: started for player %d", player.ID)
 	cost := 100
 	if player.Gold < cost {
+		log.Printf("DEBUG buyAxe: not enough gold")
 		return c.Send(h.renderer.ErrorMessage(fmt.Sprintf("Not enough gold! Need %d, have %d", cost, player.Gold)), tele.ModeHTML)
 	}
 
 	err := h.playerRepo.SpendGold(ctx, player.ID, cost)
 	if err != nil {
+		log.Printf("DEBUG buyAxe: SpendGold error: %v", err)
 		return c.Send(h.renderer.ErrorMessage("Failed to spend gold"), tele.ModeHTML)
 	}
 
 	durability, err := h.progressionService.ClaimAxe(ctx, player.ID)
 	if err != nil {
+		log.Printf("DEBUG buyAxe: ClaimAxe error: %v", err)
 		return c.Send(h.renderer.ErrorMessage(err.Error()), tele.ModeHTML)
 	}
 
-	return c.Send(h.renderer.SuccessMessage(fmt.Sprintf("Axe purchased! Durability: %d", durability)), tele.ModeHTML)
+	err = c.Send(h.renderer.SuccessMessage(fmt.Sprintf("Axe purchased! Durability: %d", durability)), tele.ModeHTML)
+	if err != nil {
+		log.Printf("DEBUG buyAxe: send error: %v", err)
+	}
+	log.Printf("DEBUG buyAxe: done")
+	return err
 }
 
 func (h *Handlers) handleMineCallback(c tele.Context, data string) error {
