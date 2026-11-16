@@ -32,6 +32,7 @@ type Handlers struct {
 	renderer           *render.Renderer
 	keyboardBuilder    *keyboards.KeyboardBuilder
 	cfg                *config.Config
+	db                 *database.DB
 }
 
 func New(
@@ -45,6 +46,7 @@ func New(
 	renderer *render.Renderer,
 	keyboardBuilder *keyboards.KeyboardBuilder,
 	cfg *config.Config,
+	db *database.DB,
 ) *Handlers {
 	return &Handlers{
 		bot:                bot,
@@ -57,6 +59,7 @@ func New(
 		renderer:           renderer,
 		keyboardBuilder:    keyboardBuilder,
 		cfg:                cfg,
+		db:                 db,
 	}
 }
 
@@ -77,6 +80,9 @@ func (h *Handlers) RegisterRoutes() {
 	// Admin routes (with middleware)
 	h.bot.Handle("/admin", h.AdminMiddleware(h.OnAdmin))
 	h.bot.Handle("/admin_cards", h.AdminMiddleware(h.OnAdminCards))
+	h.bot.Handle("/admin_shop", h.AdminMiddleware(h.OnAdminShop))
+	h.bot.Handle("/admin_shop_add", h.AdminMiddleware(h.OnAdminShopAdd))
+	h.bot.Handle("/admin_shop_remove", h.AdminMiddleware(h.OnAdminShopRemove))
 	h.bot.Handle("/admin_rarity", h.AdminMiddleware(h.OnAdminRarity))
 	h.bot.Handle("/admin_players", h.AdminMiddleware(h.OnAdminPlayers))
 	h.bot.Handle("/admin_battles", h.AdminMiddleware(h.OnAdminBattles))
@@ -339,39 +345,32 @@ func (h *Handlers) OnShop(c tele.Context) error {
 }
 
 func (h *Handlers) OnShopCards(c tele.Context) error {
-	log.Printf("DEBUG OnShopCards: started")
 	ctx := context.Background()
 	user := c.Sender()
 
 	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, user.ID)
 	if err != nil || player == nil {
-		log.Printf("DEBUG OnShopCards: player not found, err=%v", err)
 		return c.Edit(h.renderer.NotRegisteredMessage(), h.keyboardBuilder.MainMenu(), tele.ModeHTML)
 	}
 
-	log.Printf("DEBUG OnShopCards: player found, id=%d", player.ID)
-
-	// Get all cards that can be bought
-	cards, err := h.cardService.GetAllCards(ctx)
+	// Get shop items from database
+	shopItems, err := h.cardRepo.GetShopItems(ctx)
 	if err != nil {
-		log.Printf("DEBUG OnShopCards: GetAllCards error: %v", err)
 		return c.Edit(h.renderer.ErrorMessage("Failed to load shop"), h.keyboardBuilder.ShopMenu(), tele.ModeHTML)
 	}
 
-	log.Printf("DEBUG OnShopCards: got %d cards", len(cards))
-
-	// Filter cards that have a cost (are buyable)
+	// Get card details for each shop item
 	var buyableCards []models.Card
-	for _, card := range cards {
-		if card.CostGold > 0 || card.CostScrap > 0 {
-			buyableCards = append(buyableCards, *card)
+	for _, item := range shopItems {
+		if item.CardID != "" && (item.CostGold > 0 || item.CostScrap > 0) {
+			card, err := h.cardService.GetCard(ctx, item.CardID)
+			if err == nil && card != nil {
+				buyableCards = append(buyableCards, *card)
+			}
 		}
 	}
 
-	log.Printf("DEBUG OnShopCards: %d buyable cards", len(buyableCards))
-
 	msg := h.renderer.ShopCardsMessage(buyableCards, 1, 1)
-	log.Printf("DEBUG OnShopCards: sending message and keyboard")
 
 	// Send photos for first few cards (non-blocking)
 	count := 0
@@ -389,8 +388,6 @@ func (h *Handlers) OnShopCards(c tele.Context) error {
 					log.Printf("DEBUG OnShopCards: failed to send photo: %v", err)
 				}
 				count++
-			} else {
-				log.Printf("DEBUG OnShopCards: art file not found: %s", card.ArtURL)
 			}
 		}
 	}
@@ -400,29 +397,52 @@ func (h *Handlers) OnShopCards(c tele.Context) error {
 	if err != nil {
 		log.Printf("DEBUG OnShopCards: failed to edit message: %v", err)
 	}
-	log.Printf("DEBUG OnShopCards: done")
 	return err
 }
 
 func (h *Handlers) OnShopChests(c tele.Context) error {
-	log.Printf("DEBUG OnShopChests: started")
 	ctx := context.Background()
 	user := c.Sender()
 
 	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, user.ID)
 	if err != nil || player == nil {
-		log.Printf("DEBUG OnShopChests: player not found")
 		return c.Edit(h.renderer.NotRegisteredMessage(), h.keyboardBuilder.MainMenu(), tele.ModeHTML)
 	}
 
-	chests := h.getAvailableChests(player.Level)
-	log.Printf("DEBUG OnShopChests: %d chests available", len(chests))
+	// Get shop items for chests (items with no card_id)
+	shopItems, err := h.cardRepo.GetShopItems(ctx)
+	if err != nil {
+		return c.Edit(h.renderer.ErrorMessage("Failed to load shop"), h.keyboardBuilder.ShopMenu(), tele.ModeHTML)
+	}
+
+	// Filter chest items (no card_id)
+	var chestItems []*models.ShopItem
+	for _, item := range shopItems {
+		if item.CardID == "" && item.CostGold > 0 {
+			chestItems = append(chestItems, item)
+		}
+	}
+
+	// Convert to Chest models for rendering
+	var chests []models.Chest
+	for _, item := range chestItems {
+		if item.LevelRequired <= int(player.Level) {
+			chests = append(chests, models.Chest{
+				ID:            item.ID,
+				Name:          item.Name,
+				Description:   item.Description,
+				LevelRequired: item.LevelRequired,
+				Gold:          item.CostGold,
+				Cooldown:      24 * time.Hour,
+			})
+		}
+	}
+
 	msg := h.renderer.ChestMessage(chests, player.Level)
 	err = c.Edit(msg, h.keyboardBuilder.ChestMenu(chests, player.Level), tele.ModeHTML)
 	if err != nil {
 		log.Printf("DEBUG OnShopChests: edit error: %v", err)
 	}
-	log.Printf("DEBUG OnShopChests: done")
 	return err
 }
 
@@ -457,7 +477,38 @@ func (h *Handlers) OnChest(c tele.Context) error {
 		return c.Send(h.renderer.NotRegisteredMessage(), tele.ModeHTML)
 	}
 
-	chests := h.getAvailableChests(player.Level)
+	// Get shop items for chests (items with no card_id)
+	shopItems, err := h.cardRepo.GetShopItems(ctx)
+	if err != nil {
+		if c.Callback() != nil {
+			return c.Edit(h.renderer.ErrorMessage("Failed to load chests"), h.keyboardBuilder.MainMenu(), tele.ModeHTML)
+		}
+		return c.Send(h.renderer.ErrorMessage("Failed to load chests"), tele.ModeHTML)
+	}
+
+	// Filter chest items (no card_id)
+	var chestItems []*models.ShopItem
+	for _, item := range shopItems {
+		if item.CardID == "" && item.CostGold > 0 {
+			chestItems = append(chestItems, item)
+		}
+	}
+
+	// Convert to Chest models for rendering
+	var chests []models.Chest
+	for _, item := range chestItems {
+		if item.LevelRequired <= int(player.Level) {
+			chests = append(chests, models.Chest{
+				ID:            item.ID,
+				Name:          item.Name,
+				Description:   item.Description,
+				LevelRequired: item.LevelRequired,
+				Gold:          item.CostGold,
+				Cooldown:      24 * time.Hour,
+			})
+		}
+	}
+
 	msg := h.renderer.ChestMessage(chests, player.Level)
 	if c.Callback() != nil {
 		return c.Edit(msg, h.keyboardBuilder.ChestMenu(chests, player.Level), tele.ModeHTML)
@@ -635,6 +686,7 @@ func (h *Handlers) OnAdmin(c tele.Context) error {
 
 Available commands:
 /admin_cards - Manage cards
+/admin_shop - Manage shop items
 /admin_rarity - Manage rarities
 /admin_players - View/edit players
 /admin_battles - View battles`
@@ -662,6 +714,111 @@ func (h *Handlers) OnAdminCards(c tele.Context) error {
 	}
 
 	return c.Send(sb.String(), tele.ModeHTML)
+}
+
+func (h *Handlers) OnAdminShop(c tele.Context) error {
+	ctx := context.Background()
+	shopItems, err := h.cardRepo.GetShopItems(ctx)
+	if err != nil {
+		return c.Send(h.renderer.ErrorMessage("Failed to load shop items"), tele.ModeHTML)
+	}
+
+	var sb strings.Builder
+	sb.WriteString("🏪 <b>Shop Items</b>\n\n")
+	if len(shopItems) == 0 {
+		sb.WriteString("No shop items configured.\n\n")
+	} else {
+		for _, item := range shopItems {
+			cardName := "N/A"
+			if item.CardID != "" {
+				card, err := h.cardService.GetCard(ctx, item.CardID)
+				if err == nil && card != nil {
+					cardName = card.Name
+				}
+			}
+			sb.WriteString(fmt.Sprintf("📦 %s (ID: %s)\n", item.Name, item.ID))
+			sb.WriteString(fmt.Sprintf("   Card: %s (ID: %s)\n", cardName, item.CardID))
+			sb.WriteString(fmt.Sprintf("   Cost: %d Gold / %d Scrap | Stock: %d | Level: %d\n\n",
+				item.CostGold, item.CostScrap, item.Stock, item.LevelRequired))
+		}
+	}
+	sb.WriteString("\nUse /admin_shop_add <card_id> <cost_gold> <cost_scrap> [level] to add item\n")
+	sb.WriteString("Use /admin_shop_remove <item_id> to remove item")
+
+	return c.Send(sb.String(), tele.ModeHTML)
+}
+
+func (h *Handlers) OnAdminShopAdd(c tele.Context) error {
+	if !h.isAdmin(c.Sender().ID) {
+		return c.Send(h.renderer.ErrorMessage("Admin access required"), tele.ModeHTML)
+	}
+
+	args := strings.Fields(c.Text())
+	if len(args) < 4 {
+		return c.Send(h.renderer.ErrorMessage("Usage: /admin_shop_add <card_id> <cost_gold> <cost_scrap> [level_required]"), tele.ModeHTML)
+	}
+
+	cardID := args[1]
+	costGold, err := strconv.Atoi(args[2])
+	if err != nil {
+		return c.Send(h.renderer.ErrorMessage("Invalid cost_gold"), tele.ModeHTML)
+	}
+	costScrap, err := strconv.Atoi(args[3])
+	if err != nil {
+		return c.Send(h.renderer.ErrorMessage("Invalid cost_scrap"), tele.ModeHTML)
+	}
+	levelRequired := 1
+	if len(args) >= 5 {
+		levelRequired, _ = strconv.Atoi(args[4])
+	}
+
+	ctx := context.Background()
+	// Verify card exists
+	card, err := h.cardService.GetCard(ctx, cardID)
+	if err != nil || card == nil {
+		return c.Send(h.renderer.ErrorMessage("Card not found"), tele.ModeHTML)
+	}
+
+	itemID := "shop_card_" + cardID
+	_, err = h.db.Pool.Exec(ctx,
+		`INSERT INTO shop_items (id, name, description, card_id, cost_gold, cost_scrap, stock, level_required)
+		 VALUES ($1, $2, $3, $4, $5, $6, -1, $7)
+		 ON CONFLICT (id) DO UPDATE SET
+			name = EXCLUDED.name,
+			description = EXCLUDED.description,
+			card_id = EXCLUDED.card_id,
+			cost_gold = EXCLUDED.cost_gold,
+			cost_scrap = EXCLUDED.cost_scrap,
+			level_required = EXCLUDED.level_required`,
+		itemID, card.Name, "Buy "+card.Name, cardID, costGold, costScrap, levelRequired)
+	if err != nil {
+		log.Printf("Error adding shop item: %v", err)
+		return c.Send(h.renderer.ErrorMessage("Failed to add shop item"), tele.ModeHTML)
+	}
+
+	return c.Send(h.renderer.SuccessMessage(fmt.Sprintf("Added %s to shop (Gold: %d, Scrap: %d)", card.Name, costGold, costScrap)), tele.ModeHTML)
+}
+
+func (h *Handlers) OnAdminShopRemove(c tele.Context) error {
+	if !h.isAdmin(c.Sender().ID) {
+		return c.Send(h.renderer.ErrorMessage("Admin access required"), tele.ModeHTML)
+	}
+
+	args := strings.Fields(c.Text())
+	if len(args) < 2 {
+		return c.Send(h.renderer.ErrorMessage("Usage: /admin_shop_remove <item_id>"), tele.ModeHTML)
+	}
+
+	itemID := args[1]
+	ctx := context.Background()
+
+	_, err := h.db.Pool.Exec(ctx, `DELETE FROM shop_items WHERE id = $1`, itemID)
+	if err != nil {
+		log.Printf("Error removing shop item: %v", err)
+		return c.Send(h.renderer.ErrorMessage("Failed to remove shop item"), tele.ModeHTML)
+	}
+
+	return c.Send(h.renderer.SuccessMessage("Shop item removed"), tele.ModeHTML)
 }
 
 func (h *Handlers) OnAdminRarity(c tele.Context) error {
@@ -972,33 +1129,33 @@ func (h *Handlers) buyCard(c tele.Context, ctx context.Context, player *models.P
 }
 
 func (h *Handlers) buyChest(c tele.Context, ctx context.Context, player *models.Player, chestID string) error {
-	chests := h.getAvailableChests(player.Level)
-	var chest *models.Chest
-	for _, ch := range chests {
-		if ch.ID == chestID {
-			chest = &ch
-			break
-		}
+	// Get shop item for this chest
+	shopItem, err := h.cardRepo.GetShopItem(ctx, chestID)
+	if err != nil {
+		return c.Send(h.renderer.ErrorMessage("Failed to load chest"), tele.ModeHTML)
 	}
 
-	if chest == nil {
-		return c.Send(h.renderer.ErrorMessage("Chest not found or not available for your level"), tele.ModeHTML)
+	if shopItem == nil || shopItem.CardID != "" {
+		return c.Send(h.renderer.ErrorMessage("Chest not found"), tele.ModeHTML)
 	}
 
-	// For now, chests cost gold (could be expanded to use chest-specific currency)
-	cost := 100 // Default cost
+	if shopItem.LevelRequired > int(player.Level) {
+		return c.Send(h.renderer.ErrorMessage(fmt.Sprintf("Chest requires level %d", shopItem.LevelRequired)), tele.ModeHTML)
+	}
+
+	cost := shopItem.CostGold
 	if player.Gold < cost {
 		return c.Send(h.renderer.ErrorMessage(fmt.Sprintf("Not enough gold! Need %d, have %d", cost, player.Gold)), tele.ModeHTML)
 	}
 
-	err := h.playerRepo.SpendGold(ctx, player.ID, cost)
+	err = h.playerRepo.SpendGold(ctx, player.ID, cost)
 	if err != nil {
 		return c.Send(h.renderer.ErrorMessage("Failed to spend gold"), tele.ModeHTML)
 	}
 
 	// Open chest and give rewards (simplified)
 	// In a real implementation, this would use the progression service
-	return c.Send(h.renderer.SuccessMessage(fmt.Sprintf("Purchased %s for %d gold! Chest opening coming soon.", chest.Name, cost)), tele.ModeHTML)
+	return c.Send(h.renderer.SuccessMessage(fmt.Sprintf("Purchased %s for %d gold! Chest opening coming soon.", shopItem.Name, cost)), tele.ModeHTML)
 }
 
 func (h *Handlers) buyAxe(c tele.Context, ctx context.Context, player *models.Player) error {

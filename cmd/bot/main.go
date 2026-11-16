@@ -100,6 +100,7 @@ func main() {
 		msgRenderer,
 		keyboardBuilder,
 		cfg,
+		db,
 	)
 
 	h.RegisterRoutes()

@@ -206,13 +206,13 @@ func (k *KeyboardBuilder) ChestMenu(chests []models.Chest, playerLevel models.Pl
 		if chest.LevelRequired <= int(playerLevel) {
 			btn := markup.Data(
 				chest.Name+" ("+chest.Cooldown.String()+")",
-				"chest_open:"+chest.ID,
+				"shop_buy_chest:"+chest.ID,
 			)
 			markup.Row(btn)
 		}
 	}
 
-	btnBack := markup.Data("🔙 Back", "main_menu")
+	btnBack := markup.Data("🔙 Back", "shop_main")
 	markup.Row(btnBack)
 
 	return markup
