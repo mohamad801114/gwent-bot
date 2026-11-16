@@ -334,3 +334,64 @@ func (r *PlayerRepo) RecordBattleResult(ctx context.Context, playerID int64, won
 	_, err := r.db.Pool.Exec(ctx, query, playerID, wonInt, lostInt)
 	return err
 }
+
+func (r *PlayerRepo) GetAllPlayers(ctx context.Context) ([]*models.Player, error) {
+	query := `
+		SELECT id, telegram_id, username, first_name, last_name, level, experience,
+			gold, scrap, meteorite_powder, collection, deck, leader_id,
+			daily_coin_claimed_at, axe_claimed_at, axe_durability, mine_unlocked,
+			mine_extracts_today, last_mine_extract_at,
+			games_played, games_won, games_lost, highest_rank,
+			created_at, updated_at
+		FROM players ORDER BY level DESC, experience DESC LIMIT 100`
+
+	rows, err := r.db.Pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var players []*models.Player
+	for rows.Next() {
+		var p models.Player
+		var collectionJSON, deckJSON []byte
+		var dailyCoinClaimedAt, axeClaimedAt, lastMineExtractAt pgtype.Timestamptz
+
+		err := rows.Scan(
+			&p.ID, &p.TelegramID, &p.Username, &p.FirstName, &p.LastName,
+			&p.Level, &p.Experience,
+			&p.Gold, &p.Scrap, &p.MeteoritePowder,
+			&collectionJSON, &deckJSON, &p.LeaderID,
+			&dailyCoinClaimedAt, &axeClaimedAt, &p.AxeDurability, &p.MineUnlocked,
+			&p.MineExtractsToday, &lastMineExtractAt,
+			&p.GamesPlayed, &p.GamesWon, &p.GamesLost, &p.HighestRank,
+			&p.CreatedAt, &p.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(collectionJSON) > 0 {
+			json.Unmarshal(collectionJSON, &p.Collection)
+		}
+		if len(deckJSON) > 0 {
+			json.Unmarshal(deckJSON, &p.Deck)
+		}
+		if dailyCoinClaimedAt.Valid {
+			t := dailyCoinClaimedAt.Time
+			p.DailyCoinClaimedAt = &t
+		}
+		if axeClaimedAt.Valid {
+			t := axeClaimedAt.Time
+			p.AxeClaimedAt = &t
+		}
+		if lastMineExtractAt.Valid {
+			t := lastMineExtractAt.Time
+			p.LastMineExtractAt = &t
+		}
+
+		players = append(players, &p)
+	}
+
+	return players, nil
+}

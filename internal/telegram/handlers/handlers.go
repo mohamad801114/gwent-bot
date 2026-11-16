@@ -85,6 +85,8 @@ func (h *Handlers) RegisterRoutes() {
 	h.bot.Handle("/admin_shop_remove", h.AdminMiddleware(h.OnAdminShopRemove))
 	h.bot.Handle("/admin_rarity", h.AdminMiddleware(h.OnAdminRarity))
 	h.bot.Handle("/admin_players", h.AdminMiddleware(h.OnAdminPlayers))
+	h.bot.Handle("/admin_set_level", h.AdminMiddleware(h.OnAdminSetLevel))
+	h.bot.Handle("/admin_add_exp", h.AdminMiddleware(h.OnAdminAddExp))
 	h.bot.Handle("/admin_battles", h.AdminMiddleware(h.OnAdminBattles))
 
 	h.bot.Handle("main_menu", h.OnMainMenu)
@@ -688,7 +690,9 @@ Available commands:
 /admin_cards - Manage cards
 /admin_shop - Manage shop items
 /admin_rarity - Manage rarities
-/admin_players - View/edit players
+/admin_players - View all players
+/admin_set_level <telegram_id> <level> - Set player level
+/admin_add_exp <telegram_id> <amount> - Add experience
 /admin_battles - View battles`
 
 	return c.Send(msg, tele.ModeHTML)
@@ -836,8 +840,106 @@ Use /admin_cards to view cards by rarity.`
 }
 
 func (h *Handlers) OnAdminPlayers(c tele.Context) error {
-	// This would need a method to get all players
-	return c.Send(h.renderer.InfoMessage("Player management coming soon!"), tele.ModeHTML)
+	ctx := context.Background()
+	players, err := h.playerRepo.GetAllPlayers(ctx)
+	if err != nil {
+		return c.Send(h.renderer.ErrorMessage("Failed to load players"), tele.ModeHTML)
+	}
+
+	var sb strings.Builder
+	sb.WriteString("👥 <b>All Players (Top 100)</b>\n\n")
+	if len(players) == 0 {
+		sb.WriteString("No players found.\n\n")
+	} else {
+		for _, p := range players {
+			sb.WriteString(fmt.Sprintf("%d. %s (@%s) - ID: %d\n", p.ID, p.FirstName, p.Username, p.TelegramID))
+			sb.WriteString(fmt.Sprintf("   Level: %d | Exp: %d | Gold: %d | Scrap: %d\n", p.Level, p.Experience, p.Gold, p.Scrap))
+			sb.WriteString(fmt.Sprintf("   Games: %dW/%dL | Cards: %d | Deck: %d\n\n",
+				p.GamesWon, p.GamesLost, len(p.Collection), len(p.Deck)))
+		}
+	}
+	sb.WriteString("\nUse /admin_set_level <telegram_id> <level> to set player level")
+	sb.WriteString("\nUse /admin_add_exp <telegram_id> <amount> to add experience")
+
+	return c.Send(sb.String(), tele.ModeHTML)
+}
+
+func (h *Handlers) OnAdminSetLevel(c tele.Context) error {
+	if !h.isAdmin(c.Sender().ID) {
+		return c.Send(h.renderer.ErrorMessage("Admin access required"), tele.ModeHTML)
+	}
+
+	args := strings.Fields(c.Text())
+	if len(args) < 3 {
+		return c.Send(h.renderer.ErrorMessage("Usage: /admin_set_level <telegram_id> <level>"), tele.ModeHTML)
+	}
+
+	telegramID, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return c.Send(h.renderer.ErrorMessage("Invalid telegram_id"), tele.ModeHTML)
+	}
+
+	level, err := strconv.Atoi(args[2])
+	if err != nil {
+		return c.Send(h.renderer.ErrorMessage("Invalid level"), tele.ModeHTML)
+	}
+
+	ctx := context.Background()
+	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, telegramID)
+	if err != nil || player == nil {
+		return c.Send(h.renderer.ErrorMessage("Player not found"), tele.ModeHTML)
+	}
+
+	player.Level = models.PlayerLevel(level)
+	err = h.playerRepo.UpdatePlayer(ctx, player)
+	if err != nil {
+		log.Printf("Error updating player level: %v", err)
+		return c.Send(h.renderer.ErrorMessage("Failed to update player level"), tele.ModeHTML)
+	}
+
+	return c.Send(h.renderer.SuccessMessage(fmt.Sprintf("Set %s's level to %d", player.FirstName, level)), tele.ModeHTML)
+}
+
+func (h *Handlers) OnAdminAddExp(c tele.Context) error {
+	if !h.isAdmin(c.Sender().ID) {
+		return c.Send(h.renderer.ErrorMessage("Admin access required"), tele.ModeHTML)
+	}
+
+	args := strings.Fields(c.Text())
+	if len(args) < 3 {
+		return c.Send(h.renderer.ErrorMessage("Usage: /admin_add_exp <telegram_id> <amount>"), tele.ModeHTML)
+	}
+
+	telegramID, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return c.Send(h.renderer.ErrorMessage("Invalid telegram_id"), tele.ModeHTML)
+	}
+
+	amount, err := strconv.Atoi(args[2])
+	if err != nil {
+		return c.Send(h.renderer.ErrorMessage("Invalid amount"), tele.ModeHTML)
+	}
+
+	ctx := context.Background()
+	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, telegramID)
+	if err != nil || player == nil {
+		return c.Send(h.renderer.ErrorMessage("Player not found"), tele.ModeHTML)
+	}
+
+	player.Experience += amount
+	// Auto-level up based on experience (simple formula: level = 1 + exp/1000)
+	newLevel := models.PlayerLevel(1 + player.Experience/1000)
+	if newLevel > player.Level {
+		player.Level = newLevel
+	}
+
+	err = h.playerRepo.UpdatePlayer(ctx, player)
+	if err != nil {
+		log.Printf("Error adding exp: %v", err)
+		return c.Send(h.renderer.ErrorMessage("Failed to add experience"), tele.ModeHTML)
+	}
+
+	return c.Send(h.renderer.SuccessMessage(fmt.Sprintf("Added %d exp to %s (Level: %d)", amount, player.FirstName, player.Level)), tele.ModeHTML)
 }
 
 func (h *Handlers) OnAdminBattles(c tele.Context) error {
