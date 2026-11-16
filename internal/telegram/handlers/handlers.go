@@ -3,6 +3,7 @@
 import (
 	"context"
 	"fmt"
+	"html"
 	"log"
 	"os"
 	"strconv"
@@ -710,10 +711,10 @@ func (h *Handlers) OnAdminCards(c tele.Context) error {
 	for _, card := range cards {
 		sb.WriteString(fmt.Sprintf("%s %s [%s] P:%d (ID: %s)\n",
 			card.Rarity.Emoji(),
-			card.Name,
+			html.EscapeString(card.Name),
 			card.Nation.Emoji(),
 			card.Provision,
-			card.ID,
+			html.EscapeString(card.ID),
 		))
 	}
 
@@ -740,8 +741,8 @@ func (h *Handlers) OnAdminShop(c tele.Context) error {
 					cardName = card.Name
 				}
 			}
-			sb.WriteString(fmt.Sprintf("📦 %s (ID: %s)\n", item.Name, item.ID))
-			sb.WriteString(fmt.Sprintf("   Card: %s (ID: %s)\n", cardName, item.CardID))
+			sb.WriteString(fmt.Sprintf("📦 %s (ID: %s)\n", html.EscapeString(item.Name), html.EscapeString(item.ID)))
+			sb.WriteString(fmt.Sprintf("   Card: %s (ID: %s)\n", html.EscapeString(cardName), html.EscapeString(item.CardID)))
 			sb.WriteString(fmt.Sprintf("   Cost: %d Gold / %d Scrap | Stock: %d | Level: %d\n\n",
 				item.CostGold, item.CostScrap, item.Stock, item.LevelRequired))
 		}
@@ -852,7 +853,7 @@ func (h *Handlers) OnAdminPlayers(c tele.Context) error {
 		sb.WriteString("No players found.\n\n")
 	} else {
 		for _, p := range players {
-			sb.WriteString(fmt.Sprintf("%d. %s (@%s) - ID: %d\n", p.ID, p.FirstName, p.Username, p.TelegramID))
+			sb.WriteString(fmt.Sprintf("%d. %s (@%s) - ID: %d\n", p.ID, html.EscapeString(p.FirstName), html.EscapeString(p.Username), p.TelegramID))
 			sb.WriteString(fmt.Sprintf("   Level: %d | Exp: %d | Gold: %d | Scrap: %d\n", p.Level, p.Experience, p.Gold, p.Scrap))
 			sb.WriteString(fmt.Sprintf("   Games: %dW/%dL | Cards: %d | Deck: %d\n\n",
 				p.GamesWon, p.GamesLost, len(p.Collection), len(p.Deck)))
