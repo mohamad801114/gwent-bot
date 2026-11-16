@@ -321,7 +321,7 @@ func (h *Handlers) OnBattle(c tele.Context) error {
 		return h.showBattleState(c, activeBattle, player)
 	}
 
-	msg := "⚔️ <b>Battle Menu</b>\n\nChoose your battle type:"
+	msg := "?? <b>Battle Menu</b>\n\nChoose your battle type:"
 	if c.Callback() != nil {
 		return c.Edit(msg, h.keyboardBuilder.BattleMenu(), tele.ModeHTML)
 	}
@@ -348,6 +348,7 @@ func (h *Handlers) OnShop(c tele.Context) error {
 }
 
 func (h *Handlers) OnShopCards(c tele.Context) error {
+	log.Printf("DEBUG OnShopCards: called")
 	ctx := context.Background()
 	user := c.Sender()
 
@@ -359,6 +360,7 @@ func (h *Handlers) OnShopCards(c tele.Context) error {
 	// Get shop items from database
 	shopItems, err := h.cardRepo.GetShopItems(ctx)
 	if err != nil {
+		log.Printf("ERROR OnShopCards: GetShopItems failed: %v", err)
 		return c.Edit(h.renderer.ErrorMessage("Failed to load shop"), h.keyboardBuilder.ShopMenu(), tele.ModeHTML)
 	}
 
@@ -369,9 +371,13 @@ func (h *Handlers) OnShopCards(c tele.Context) error {
 			card, err := h.cardService.GetCard(ctx, item.CardID)
 			if err == nil && card != nil {
 				buyableCards = append(buyableCards, *card)
+			} else {
+				log.Printf("DEBUG OnShopCards: failed to get card %s: %v", item.CardID, err)
 			}
 		}
 	}
+
+	log.Printf("DEBUG OnShopCards: found %d buyable cards from %d shop items", len(buyableCards), len(shopItems))
 
 	msg := h.renderer.ShopCardsMessage(buyableCards, 1, 1)
 
@@ -399,11 +405,14 @@ func (h *Handlers) OnShopCards(c tele.Context) error {
 	err = c.Edit(msg, h.keyboardBuilder.ShopCards(buyableCards, 1, 1), tele.ModeHTML)
 	if err != nil {
 		log.Printf("DEBUG OnShopCards: failed to edit message: %v", err)
+		// Try sending as new message if edit fails
+		return c.Send(msg, h.keyboardBuilder.ShopCards(buyableCards, 1, 1), tele.ModeHTML)
 	}
-	return err
+	return nil
 }
 
 func (h *Handlers) OnShopChests(c tele.Context) error {
+	log.Printf("DEBUG OnShopChests: called")
 	ctx := context.Background()
 	user := c.Sender()
 
@@ -415,6 +424,7 @@ func (h *Handlers) OnShopChests(c tele.Context) error {
 	// Get shop items for chests (items with no card_id)
 	shopItems, err := h.cardRepo.GetShopItems(ctx)
 	if err != nil {
+		log.Printf("ERROR OnShopChests: GetShopItems failed: %v", err)
 		return c.Edit(h.renderer.ErrorMessage("Failed to load shop"), h.keyboardBuilder.ShopMenu(), tele.ModeHTML)
 	}
 
@@ -441,12 +451,16 @@ func (h *Handlers) OnShopChests(c tele.Context) error {
 		}
 	}
 
+	log.Printf("DEBUG OnShopChests: found %d chests for player level %d", len(chests), player.Level)
+
 	msg := h.renderer.ChestMessage(chests, player.Level)
 	err = c.Edit(msg, h.keyboardBuilder.ChestMenu(chests, player.Level), tele.ModeHTML)
 	if err != nil {
 		log.Printf("DEBUG OnShopChests: edit error: %v", err)
+		// Try sending as new message if edit fails
+		return c.Send(msg, h.keyboardBuilder.ChestMenu(chests, player.Level), tele.ModeHTML)
 	}
-	return err
+	return nil
 }
 
 func (h *Handlers) OnMine(c tele.Context) error {
@@ -570,7 +584,7 @@ func (h *Handlers) OnMainMenu(c tele.Context) error {
 
 func (h *Handlers) OnBattleMenu(c tele.Context) error {
 	h.answerCallback(c)
-	msg := "⚔️ <b>Battle Menu</b>\n\nChoose your battle type:"
+	msg := "?? <b>Battle Menu</b>\n\nChoose your battle type:"
 	return c.Edit(msg, h.keyboardBuilder.BattleMenu(), tele.ModeHTML)
 }
 
@@ -675,7 +689,7 @@ func (h *Handlers) createFriendBattle(c tele.Context) error {
 
 	// Create a friend invite that other players in the group can accept
 	msg := fmt.Sprintf(
-		"⚔️ <b>%s</b> wants to play a friendly match!\n\n"+
+		"?? <b>%s</b> wants to play a friendly match!\n\n"+
 			"Click the button below to accept the challenge.",
 		player.FirstName,
 	)
@@ -685,7 +699,7 @@ func (h *Handlers) createFriendBattle(c tele.Context) error {
 
 // Admin command handlers
 func (h *Handlers) OnAdmin(c tele.Context) error {
-	msg := `🔧 <b>Admin Panel</b>
+	msg := `?? <b>Admin Panel</b>
 
 Available commands:
 /admin_cards - Manage cards
@@ -707,7 +721,7 @@ func (h *Handlers) OnAdminCards(c tele.Context) error {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("🃏 <b>All Cards</b>\n\n")
+	sb.WriteString("?? <b>All Cards</b>\n\n")
 	for _, card := range cards {
 		sb.WriteString(fmt.Sprintf("%s %s [%s] P:%d (ID: %s)\n",
 			card.Rarity.Emoji(),
@@ -729,7 +743,7 @@ func (h *Handlers) OnAdminShop(c tele.Context) error {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("🏪 <b>Shop Items</b>\n\n")
+	sb.WriteString("?? <b>Shop Items</b>\n\n")
 	if len(shopItems) == 0 {
 		sb.WriteString("No shop items configured.\n\n")
 	} else {
@@ -741,7 +755,7 @@ func (h *Handlers) OnAdminShop(c tele.Context) error {
 					cardName = card.Name
 				}
 			}
-			sb.WriteString(fmt.Sprintf("📦 %s (ID: %s)\n", html.EscapeString(item.Name), html.EscapeString(item.ID)))
+			sb.WriteString(fmt.Sprintf("?? %s (ID: %s)\n", html.EscapeString(item.Name), html.EscapeString(item.ID)))
 			sb.WriteString(fmt.Sprintf("   Card: %s (ID: %s)\n", html.EscapeString(cardName), html.EscapeString(item.CardID)))
 			sb.WriteString(fmt.Sprintf("   Cost: %d Gold / %d Scrap | Stock: %d | Level: %d\n\n",
 				item.CostGold, item.CostScrap, item.Stock, item.LevelRequired))
@@ -827,7 +841,7 @@ func (h *Handlers) OnAdminShopRemove(c tele.Context) error {
 }
 
 func (h *Handlers) OnAdminRarity(c tele.Context) error {
-	msg := `🎨 <b>Rarity Management</b>
+	msg := `?? <b>Rarity Management</b>
 
 Rarities available:
 • Common (⚪)
@@ -848,7 +862,7 @@ func (h *Handlers) OnAdminPlayers(c tele.Context) error {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("👥 <b>All Players (Top 100)</b>\n\n")
+	sb.WriteString("?? <b>All Players (Top 100)</b>\n\n")
 	if len(players) == 0 {
 		sb.WriteString("No players found.\n\n")
 	} else {
@@ -974,52 +988,63 @@ func (h *Handlers) OnCallback(c tele.Context) error {
 		}); err != nil {
 			log.Printf("ERROR: Failed to answer callback query: %v", err)
 		}
+
+		data := cb.Data
+		log.Printf("DEBUG OnCallback: processing data=%q", data)
+
+		if data == "" {
+			log.Printf("WARN: OnCallback received empty callback data")
+			return nil
+		}
+
+		// Route callback based on prefix
+		if strings.HasPrefix(data, "battle_") {
+			return h.handleBattleCallback(c, data)
+		}
+
+		if strings.HasPrefix(data, "shop_") {
+			return h.handleShopCallback(c, data)
+		}
+
+		if strings.HasPrefix(data, "mine_") {
+			return h.handleMineCallback(c, data)
+		}
+
+		if strings.HasPrefix(data, "chest_") {
+			return h.handleChestCallback(c, data)
+		}
+
+		if strings.HasPrefix(data, "leader_") {
+			return h.handleLeaderCallback(c, data)
+		}
+
+		if strings.HasPrefix(data, "deck_") {
+			return h.handleDeckCallback(c, data)
+		}
+
+		if strings.HasPrefix(data, "confirm_") {
+			return h.handleConfirmCallback(c, data)
+		}
+
+		if strings.HasPrefix(data, "friend_") {
+			return h.handleFriendCallback(c, data)
+		}
+
+		if strings.HasPrefix(data, "test_") {
+			return h.handleTestCallback(c, data)
+		}
+
+		log.Printf("WARN OnCallback: unknown callback data prefix: %q", data)
+		return nil
+	} else {
+		log.Printf("WARN: OnCallback called with nil callback query")
+		return nil
 	}
-
-	data := cb.Data
-
-	if strings.HasPrefix(data, "battle_") {
-		return h.handleBattleCallback(c, data)
-	}
-
-	if strings.HasPrefix(data, "shop_") {
-		return h.handleShopCallback(c, data)
-	}
-
-	if strings.HasPrefix(data, "mine_") {
-		return h.handleMineCallback(c, data)
-	}
-
-	if strings.HasPrefix(data, "chest_") {
-		return h.handleChestCallback(c, data)
-	}
-
-	if strings.HasPrefix(data, "leader_") {
-		return h.handleLeaderCallback(c, data)
-	}
-
-	if strings.HasPrefix(data, "deck_") {
-		return h.handleDeckCallback(c, data)
-	}
-
-	if strings.HasPrefix(data, "confirm_") {
-		return h.handleConfirmCallback(c, data)
-	}
-
-	if strings.HasPrefix(data, "friend_") {
-		return h.handleFriendCallback(c, data)
-	}
-
-	if strings.HasPrefix(data, "test_") {
-		return h.handleTestCallback(c, data)
-	}
-
-	return nil
 }
 
 func (h *Handlers) handleTestCallback(c tele.Context, data string) error {
 	if data == "test_click" {
-		return c.Send("✅ Callback works! Button click detected.", tele.ModeHTML)
+		return c.Send("? Callback works! Button click detected.", tele.ModeHTML)
 	}
 	return nil
 }
@@ -1027,9 +1052,9 @@ func (h *Handlers) handleTestCallback(c tele.Context, data string) error {
 // DEBUG: Test callback query
 func (h *Handlers) OnTestCallback(c tele.Context) error {
 	markup := &tele.ReplyMarkup{}
-	row := markup.Row(markup.Data("🔘 Test Click", "test_click"))
+	row := markup.Row(markup.Data("?? Test Click", "test_click"))
 	markup.Inline(row)
-	return c.Send("🔧 <b>Callback Test</b>\n\nClick the button below to test if callbacks work:", markup, tele.ModeHTML)
+	return c.Send("?? <b>Callback Test</b>\n\nClick the button below to test if callbacks work:", markup, tele.ModeHTML)
 }
 
 func (h *Handlers) handleBattleCallback(c tele.Context, data string) error {
@@ -1170,8 +1195,8 @@ func (h *Handlers) handleShopCallback(c tele.Context, data string) error {
 		return h.OnShop(c)
 	}
 
-	log.Printf("DEBUG handleShopCallback: unknown data %s", data)
-	return nil
+	log.Printf("WARN handleShopCallback: unknown callback data=%q", data)
+	return c.Send(h.renderer.ErrorMessage("Unknown shop action"), tele.ModeHTML)
 }
 
 func (h *Handlers) buyCard(c tele.Context, ctx context.Context, player *models.Player, cardID string) error {
@@ -1222,7 +1247,7 @@ func (h *Handlers) buyCard(c tele.Context, ctx context.Context, player *models.P
 		if _, err := os.Stat(card.ArtURL); err == nil {
 			photo := &tele.Photo{
 				File:    tele.FromDisk(card.ArtURL),
-				Caption: fmt.Sprintf("✅ <b>Purchased!</b>\n\n%s", h.renderer.CardCaption(card)),
+				Caption: fmt.Sprintf("? <b>Purchased!</b>\n\n%s", h.renderer.CardCaption(card)),
 			}
 			c.Send(photo, tele.ModeHTML)
 		}
@@ -1437,7 +1462,7 @@ func (h *Handlers) handleFriendCallback(c tele.Context, data string) error {
 
 		// Send to the inviter (would need to use bot.Send with chat ID in real implementation)
 		// For now, just notify the inviter
-		h.bot.Send(&tele.User{ID: inviter.TelegramID}, fmt.Sprintf("⚔️ %s accepted your challenge! Battle started.", player.FirstName), tele.ModeHTML)
+		h.bot.Send(&tele.User{ID: inviter.TelegramID}, fmt.Sprintf("?? %s accepted your challenge! Battle started.", player.FirstName), tele.ModeHTML)
 
 		return nil
 	}
