@@ -408,19 +408,36 @@ func (h *Handlers) OnShopCards(c tele.Context) error {
 	caption := h.renderer.ShopCardDetailMessage(currentCard, page, len(buyableCards))
 	keyboard := h.keyboardBuilder.ShopCards(buyableCards, page, len(buyableCards))
 
-	// If we have a photo, send it first, then edit to add keyboard
-	// This works around telebot v3 limitation with inline keyboards on photos
+	// If we have a photo, try sending with keyboard directly first (standard way)
+	// If that doesn't work, fallback to EditReplyMarkup
 	if photo != nil {
 		photo.Caption = caption
-		// Send photo first
-		sentMsg, err := c.Bot().Send(c.Chat(), photo, tele.ModeHTML)
-		if err != nil {
-			log.Printf("DEBUG OnShopCards: failed to send photo: %v", err)
-			return nil
+		// Debug: log keyboard structure
+		log.Printf("DEBUG OnShopCards: keyboard created, InlineKeyboard rows: %d", len(keyboard.InlineKeyboard))
+		for i, row := range keyboard.InlineKeyboard {
+			log.Printf("DEBUG OnShopCards: row %d has %d buttons", i, len(row))
+			for j, btn := range row {
+				log.Printf("DEBUG OnShopCards:   btn %d: text=%q data=%q", j, btn.Text, btn.Data)
+			}
 		}
-		// Edit the sent message to add inline keyboard
-		if _, err := c.Bot().Edit(sentMsg, caption, keyboard, tele.ModeHTML); err != nil {
-			log.Printf("DEBUG OnShopCards: failed to edit message with keyboard: %v", err)
+		// Try sending photo with keyboard in one call (standard Telegram Bot API way)
+		sentMsg, err := c.Bot().Send(c.Chat(), photo, keyboard, tele.ModeHTML)
+		if err != nil {
+			log.Printf("DEBUG OnShopCards: failed to send photo with keyboard: %v", err)
+			// Fallback: send photo, then edit reply markup
+			sentMsg, err = c.Bot().Send(c.Chat(), photo, tele.ModeHTML)
+			if err != nil {
+				log.Printf("DEBUG OnShopCards: failed to send photo: %v", err)
+				return nil
+			}
+			log.Printf("DEBUG OnShopCards: photo sent (fallback), message ID: %d", sentMsg.ID)
+			if _, err := c.Bot().EditReplyMarkup(sentMsg, keyboard); err != nil {
+				log.Printf("DEBUG OnShopCards: failed to edit reply markup: %v", err)
+			} else {
+				log.Printf("DEBUG OnShopCards: reply markup edited successfully (fallback)")
+			}
+		} else {
+			log.Printf("DEBUG OnShopCards: photo sent with keyboard directly, message ID: %d", sentMsg.ID)
 		}
 		// For callback queries, delete the old callback message
 		if c.Callback() != nil && c.Callback().Message != nil {
