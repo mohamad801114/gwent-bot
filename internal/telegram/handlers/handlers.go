@@ -411,12 +411,8 @@ func (h *Handlers) OnShopCards(c tele.Context) error {
 	// If we have a photo, send/edit with photo and keyboard together
 	if photo != nil {
 		photo.Caption = caption
-		// For callback queries, try to edit the message with photo and keyboard
-		// If the original message is not a photo, this will fail and we'll send new
+		// For callback queries, send new photo with keyboard and delete old
 		if c.Callback() != nil {
-			// Try to edit with photo (works if original was photo)
-			// telebot v3 doesn't support editing text->photo directly
-			// So we send new photo with keyboard and delete old if needed
 			if err := c.Send(photo, keyboard, tele.ModeHTML); err != nil {
 				log.Printf("DEBUG OnShopCards: failed to send photo with keyboard: %v", err)
 			}
