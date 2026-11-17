@@ -1,6 +1,7 @@
 ﻿package keyboards
 
 import (
+	"fmt"
 	"strconv"
 
 	tele "gopkg.in/telebot.v3"
@@ -152,30 +153,43 @@ func (k *KeyboardBuilder) ShopMenu() *tele.ReplyMarkup {
 func (k *KeyboardBuilder) ShopCards(cards []models.Card, page, totalPages int) *tele.ReplyMarkup {
 	markup := &tele.ReplyMarkup{}
 
-	for i, card := range cards {
-		if i >= 5 {
-			break
-		}
-		btn := markup.Data(
-			card.Rarity.Emoji()+" "+card.Name+" ["+card.Nation.Emoji()+"] P:"+string(rune(card.Power)),
-			"shop_buy_card:"+card.ID,
-		)
-		markup.Row(btn)
+	if len(cards) == 0 {
+		btnBack := markup.Data("🔙 Back", "shop_main")
+		markup.Row(btnBack)
+		return markup
 	}
 
+	// Current card (1-indexed page)
+	currentCard := cards[page-1]
+
+	// Buy button for current card
+	btnBuy := markup.Data(
+		fmt.Sprintf("💰 Buy %s (%d Gold)", currentCard.Name, currentCard.CostGold),
+		"shop_buy_card:"+currentCard.ID,
+	)
+	markup.Row(btnBuy)
+
+	// Navigation row: Previous, Next, Back
 	navRow := []tele.Btn{}
+
 	if page > 1 {
 		navRow = append(navRow, markup.Data("⬅️ Prev", "shop_page:"+strconv.Itoa(page-1)))
-	}
-	if page < totalPages {
-		navRow = append(navRow, markup.Data("Next ➡️", "shop_page:"+strconv.Itoa(page+1)))
-	}
-	if len(navRow) > 0 {
-		markup.Row(navRow...)
+	} else {
+		// Disabled previous button
+		navRow = append(navRow, markup.Data("⬅️ Prev", "shop_page_disabled"))
 	}
 
-	btnBack := markup.Data("🔙 Back", "shop_main")
-	markup.Row(btnBack)
+	if page < totalPages {
+		navRow = append(navRow, markup.Data("Next ➡️", "shop_page:"+strconv.Itoa(page+1)))
+	} else {
+		// Disabled next button
+		navRow = append(navRow, markup.Data("Next ➡️", "shop_page_disabled"))
+	}
+
+	// Back button
+	navRow = append(navRow, markup.Data("🔙 Back", "shop_main"))
+
+	markup.Row(navRow...)
 
 	return markup
 }

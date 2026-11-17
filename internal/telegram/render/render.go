@@ -350,27 +350,38 @@ func (r *Renderer) ShopMessage(player *models.Player) string {
 }
 
 func (r *Renderer) ShopCardsMessage(cards []models.Card, page, totalPages int) string {
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("🃏 <b>Buy Cards</b> (Page %d/%d)\n\n", page, totalPages))
-
-	for _, card := range cards {
-		cost := ""
-		if card.CostGold > 0 {
-			cost += fmt.Sprintf(" 💰%d", card.CostGold)
-		}
-		if card.CostScrap > 0 {
-			cost += fmt.Sprintf(" 💎%d", card.CostScrap)
-		}
-		sb.WriteString(fmt.Sprintf("%s %s [%s] P:%d%s\n",
-			card.Rarity.Emoji(),
-			card.Name,
-			card.Nation.Emoji(),
-			card.Power,
-			cost,
-		))
+	if len(cards) == 0 {
+		return "🃏 <b>Buy Cards</b>\n\nNo cards available in shop."
 	}
 
-	return sb.String()
+	// For backward compatibility - show first card
+	if page > 0 && page <= len(cards) {
+		return r.ShopCardDetailMessage(cards[page-1], page, len(cards))
+	}
+	return r.ShopCardDetailMessage(cards[0], 1, len(cards))
+}
+
+func (r *Renderer) ShopCardDetailMessage(card models.Card, page, totalPages int) string {
+	cost := ""
+	if card.CostGold > 0 {
+		cost += fmt.Sprintf(" 💰%d", card.CostGold)
+	}
+	if card.CostScrap > 0 {
+		cost += fmt.Sprintf(" 💎%d", card.CostScrap)
+	}
+
+	return fmt.Sprintf(
+		"🃏 <b>Buy Cards</b> (Page %d/%d)\n\n"+
+			"%s <b>%s</b> [%s]\n"+
+			"⚔️ Power: %d%s\n\n"+
+			"%s\n\n"+
+			"%s",
+		page, totalPages,
+		card.Rarity.Emoji(), card.Name, card.Nation.Emoji(),
+		card.Power, cost,
+		card.Description,
+		card.FlavorText,
+	)
 }
 
 func (r *Renderer) MineMessage(player *models.Player, cfg *config.Config) string {

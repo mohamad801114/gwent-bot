@@ -370,29 +370,49 @@ func (h *Handlers) OnShopCards(c tele.Context) error {
 
 	log.Printf("DEBUG OnShopCards: found %d buyable cards from %d shop items", len(buyableCards), len(shopItems))
 
-	msg := h.renderer.ShopCardsMessage(buyableCards, 1, 1)
-
-	// Send photos for first few cards (non-blocking)
-	count := 0
-	for _, card := range buyableCards {
-		if count >= 5 {
-			break
-		}
-		photo, err := h.renderer.GetCardPhoto(&card)
-		if err == nil && photo != nil {
-			if err := c.Send(photo, tele.ModeHTML); err != nil {
-				log.Printf("DEBUG OnShopCards: failed to send photo: %v", err)
+	// Default to page 1
+	page := 1
+	if c.Callback() != nil {
+		data := c.Callback().Data
+		if strings.HasPrefix(data, "shop_page:") {
+			pageStr := strings.TrimPrefix(data, "shop_page:")
+			if p, err := strconv.Atoi(pageStr); err == nil && p > 0 && p <= len(buyableCards) {
+				page = p
 			}
-			count++
 		}
 	}
 
-	// Edit the callback message with shop cards
-	err = c.Edit(msg, h.keyboardBuilder.ShopCards(buyableCards, 1, 1), tele.ModeHTML)
+	if len(buyableCards) == 0 {
+		msg := h.renderer.ShopCardsMessage([]models.Card{}, 1, 1)
+		return c.Edit(msg, h.keyboardBuilder.ShopCards([]models.Card{}, 1, 1), tele.ModeHTML)
+	}
+
+	// Clamp page to valid range
+	if page > len(buyableCards) {
+		page = len(buyableCards)
+	}
+	if page < 1 {
+		page = 1
+	}
+
+	// Get the card for current page (1-indexed)
+	currentCard := buyableCards[page-1]
+
+	// Send the card photo
+	photo, err := h.renderer.GetCardPhoto(&currentCard)
+	if err == nil && photo != nil {
+		photo.Caption = h.renderer.ShopCardDetailMessage(currentCard, page, len(buyableCards))
+		if err := c.Send(photo, tele.ModeHTML); err != nil {
+			log.Printf("DEBUG OnShopCards: failed to send photo: %v", err)
+		}
+	}
+
+	// Edit the callback message with card details and navigation
+	msg := h.renderer.ShopCardDetailMessage(currentCard, page, len(buyableCards))
+	err = c.Edit(msg, h.keyboardBuilder.ShopCards(buyableCards, page, len(buyableCards)), tele.ModeHTML)
 	if err != nil {
 		log.Printf("DEBUG OnShopCards: failed to edit message: %v", err)
-		// Try sending as new message if edit fails
-		return c.Send(msg, h.keyboardBuilder.ShopCards(buyableCards, 1, 1), tele.ModeHTML)
+		return c.Send(msg, h.keyboardBuilder.ShopCards(buyableCards, page, len(buyableCards)), tele.ModeHTML)
 	}
 	return nil
 }
@@ -1245,6 +1265,16 @@ func (h *Handlers) handleShopCallback(c tele.Context, data string) error {
 		return h.OnShop(c)
 	}
 
+	if strings.HasPrefix(data, "shop_page:") {
+		log.Printf("DEBUG handleShopCallback: shop page navigation")
+		return h.OnShopCards(c)
+	}
+
+	if data == "shop_page_disabled" {
+		log.Printf("DEBUG handleShopCallback: disabled page button clicked")
+		return c.Respond(&tele.CallbackResponse{Text: "No more pages"})
+	}
+
 	log.Printf("WARN handleShopCallback: unknown callback data=%q", data)
 	return c.Send(h.renderer.ErrorMessage("Unknown shop action"), tele.ModeHTML)
 }
@@ -1544,7 +1574,7 @@ func (h *Handlers) OnText(c tele.Context) error {
 			}
 			return c.Send(h.renderer.ErrorMessage(err.Error()), tele.ModeHTML)
 		}
-		return c.Send(h.renderer.SuccessMessage(fmt.Sprintf("ðŸ’° Daily coin claimed! You received %d gold!", reward)), tele.ModeHTML)
+		return c.Send(h.renderer.SuccessMessage(fmt.Sprintf("💰 Daily coin claimed! You received %d gold!", reward)), tele.ModeHTML)
 	}
 
 	if text == strings.ToLower(h.cfg.AxeWord) {
@@ -1555,7 +1585,7 @@ func (h *Handlers) OnText(c tele.Context) error {
 			}
 			return c.Send(h.renderer.ErrorMessage(err.Error()), tele.ModeHTML)
 		}
-		return c.Send(h.renderer.SuccessMessage(fmt.Sprintf("ðŸª“ Axe claimed! Durability: %d", durability)), tele.ModeHTML)
+		return c.Send(h.renderer.SuccessMessage(fmt.Sprintf("🪓 Axe claimed! Durability: %d", durability)), tele.ModeHTML)
 	}
 
 	if text == strings.ToLower(h.cfg.StartWord) {

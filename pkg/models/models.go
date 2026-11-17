@@ -25,15 +25,15 @@ func (f Faction) String() string { return string(f) }
 func (f Faction) Emoji() string {
 	switch f {
 	case FactionNorthernRealms:
-		return "ðŸ¦"
+		return "🦁"
 	case FactionNilfgaard:
-		return "ðŸ¦…"
+		return "🦎"
 	case FactionScoiatael:
-		return "ðŸŒ¿"
+		return "🌿"
 	case FactionMonsters:
-		return "ðŸ‘¹"
+		return "👹"
 	default:
-		return "âšª"
+		return "⚪"
 	}
 }
 
@@ -70,13 +70,13 @@ func (r RowType) String() string { return string(r) }
 func (r RowType) Emoji() string {
 	switch r {
 	case RowMelee:
-		return "âš”ï¸"
+		return "⚔️"
 	case RowRanged:
-		return "ðŸ¹"
+		return "🏹"
 	case RowSiege:
-		return "ðŸ°"
+		return "🏰"
 	default:
-		return "â“"
+		return "❓"
 	}
 }
 
@@ -95,15 +95,15 @@ const (
 func (r Rarity) Emoji() string {
 	switch r {
 	case RarityCommon:
-		return "âšª"
+		return "⚪"
 	case RarityRare:
-		return "ðŸ”µ"
+		return "🔵"
 	case RarityEpic:
-		return "ðŸŸ£"
+		return "🟣"
 	case RarityLegendary:
-		return "ðŸŸ¡"
+		return "🟡"
 	default:
-		return "âšª"
+		return "⚪"
 	}
 }
 
@@ -175,25 +175,25 @@ type Status struct {
 func (s Status) Emoji() string {
 	switch s.Name {
 	case "frost":
-		return "â„ï¸"
+		return "❄️"
 	case "fog":
-		return "ðŸŒ«ï¸"
+		return "🌫️"
 	case "rain":
-		return "ðŸŒ§ï¸"
+		return "🌧️"
 	case "boost":
-		return "ðŸŸ¢"
+		return "💚"
 	case "damage":
-		return "ðŸ”´"
+		return "💥"
 	case "shield":
-		return "ðŸ›¡ï¸"
+		return "🛡️"
 	case "poison":
-		return "â˜ ï¸"
+		return "☠️"
 	case "bleeding":
-		return "ðŸ©¸"
+		return "🩸"
 	case "vitality":
-		return "ðŸ’š"
+		return "💧"
 	default:
-		return "â“"
+		return "❓"
 	}
 }
 
@@ -289,26 +289,26 @@ type WeatherState struct {
 func (w *WeatherState) Display() string {
 	switch w.Active {
 	case "frost":
-		return "â„ï¸ Frost"
+		return "❄️ Frost"
 	case "fog":
-		return "ðŸŒ«ï¸ Fog"
+		return "🌫️ Fog"
 	case "rain":
-		return "ðŸŒ§ï¸ Rain"
+		return "🌧️ Rain"
 	default:
-		return "â˜€ï¸ Clear"
+		return "☀️ Clear"
 	}
 }
 
 func (w *WeatherState) Emoji() string {
 	switch w.Active {
 	case "frost":
-		return "â„ï¸"
+		return "❄️"
 	case "fog":
-		return "ðŸŒ«ï¸"
+		return "🌫️"
 	case "rain":
-		return "ðŸŒ§ï¸"
+		return "🌧️"
 	default:
-		return "â˜€ï¸"
+		return "☀️"
 	}
 }
 
