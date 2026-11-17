@@ -692,8 +692,8 @@ Available commands:
 /admin_shop - Manage shop items
 /admin_rarity - Manage rarities
 /admin_players - View all players
-/admin_set_level <telegram_id> <level> - Set player level
-/admin_add_exp <telegram_id> <amount> - Add experience
+/admin_set_level <code>telegram_id</code> <code>level</code> - Set player level
+/admin_add_exp <code>telegram_id</code> <code>amount</code> - Add experience
 /admin_battles - View battles`
 
 	return c.Send(msg, tele.ModeHTML)
@@ -706,9 +706,32 @@ func (h *Handlers) OnAdminCards(c tele.Context) error {
 		return c.Send(h.renderer.ErrorMessage("Failed to load cards"), tele.ModeHTML)
 	}
 
+	// Pagination: show 20 cards per page
+	pageSize := 20
+	args := strings.Fields(c.Text())
+	page := 1
+	if len(args) >= 2 {
+		if p, err := strconv.Atoi(args[1]); err == nil && p > 0 {
+			page = p
+		}
+	}
+
+	start := (page - 1) * pageSize
+	end := start + pageSize
+	if start >= len(cards) {
+		start = 0
+		page = 1
+		end = pageSize
+	}
+	if end > len(cards) {
+		end = len(cards)
+	}
+
+	totalPages := (len(cards) + pageSize - 1) / pageSize
+
 	var sb strings.Builder
-	sb.WriteString("?? <b>All Cards</b>\n\n")
-	for _, card := range cards {
+	sb.WriteString(fmt.Sprintf("?? <b>All Cards (Page %d/%d, Total: %d)</b>\n\n", page, totalPages, len(cards)))
+	for _, card := range cards[start:end] {
 		sb.WriteString(fmt.Sprintf("%s %s [%s] P:%d (ID: %s)\n",
 			card.Rarity.Emoji(),
 			html.EscapeString(card.Name),
@@ -716,6 +739,13 @@ func (h *Handlers) OnAdminCards(c tele.Context) error {
 			card.Power,
 			html.EscapeString(card.ID),
 		))
+	}
+
+	if totalPages > 1 {
+		sb.WriteString("\nUse <code>/admin_cards " + strconv.Itoa(page+1) + "</code> for next page")
+		if page > 1 {
+			sb.WriteString(" | <code>/admin_cards " + strconv.Itoa(page-1) + "</code> for previous")
+		}
 	}
 
 	return c.Send(sb.String(), tele.ModeHTML)
@@ -968,10 +998,19 @@ func (h *Handlers) showBattleState(c tele.Context, b *models.Battle, player *mod
 func (h *Handlers) OnCallback(c tele.Context) error {
 	// Answer callback immediately to remove loading state
 	h.answerCallback(c)
-	
+
 	cb := c.Callback()
 	if cb != nil {
 		data := cb.Data
+
+		// Sanitize callback data - strip control characters (fixes \f prefix issue)
+		data = strings.Map(func(r rune) rune {
+			if r < 32 || r == 127 {
+				return -1
+			}
+			return r
+		}, data)
+
 		log.Printf("DEBUG OnCallback: processing data=%q", data)
 
 		if data == "" {
