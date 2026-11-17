@@ -1,4 +1,4 @@
-package models
+﻿package models
 
 import (
 	"database/sql/driver"
@@ -25,15 +25,15 @@ func (f Faction) String() string { return string(f) }
 func (f Faction) Emoji() string {
 	switch f {
 	case FactionNorthernRealms:
-		return "🦁"
+		return "ðŸ¦"
 	case FactionNilfgaard:
-		return "🦅"
+		return "ðŸ¦…"
 	case FactionScoiatael:
-		return "🌿"
+		return "ðŸŒ¿"
 	case FactionMonsters:
-		return "👹"
+		return "ðŸ‘¹"
 	default:
-		return "⚪"
+		return "âšª"
 	}
 }
 
@@ -70,13 +70,13 @@ func (r RowType) String() string { return string(r) }
 func (r RowType) Emoji() string {
 	switch r {
 	case RowMelee:
-		return "⚔️"
+		return "âš”ï¸"
 	case RowRanged:
-		return "🏹"
+		return "ðŸ¹"
 	case RowSiege:
-		return "🏰"
+		return "ðŸ°"
 	default:
-		return "❓"
+		return "â“"
 	}
 }
 
@@ -95,15 +95,15 @@ const (
 func (r Rarity) Emoji() string {
 	switch r {
 	case RarityCommon:
-		return "⚪"
+		return "âšª"
 	case RarityRare:
-		return "🔵"
+		return "ðŸ”µ"
 	case RarityEpic:
-		return "🟣"
+		return "ðŸŸ£"
 	case RarityLegendary:
-		return "🟡"
+		return "ðŸŸ¡"
 	default:
-		return "⚪"
+		return "âšª"
 	}
 }
 
@@ -143,14 +143,12 @@ type Card struct {
 	Type        CardType `json:"type"`
 	Row         RowType  `json:"row,omitempty"`
 	Power       int      `json:"power"`
-	Armor       int      `json:"armor"`       // For GWENT: Masters compatibility
-	Provision   int      `json:"provision"`   // For GWENT: Masters compatibility
 	IsHero      bool     `json:"is_hero"`
 	Abilities   []string `json:"abilities"`   // Keyword names for Mini-Gwent
 	ArtURL      string   `json:"art_url,omitempty"`
 	FlavorText  string   `json:"flavor_text,omitempty"`
 	CardGroup   string   `json:"card_group"`  // close, ranged, siege, special, hero
-	Rarity      Rarity   `json:"rarity"`      // For GWENT: Masters compatibility
+	Rarity      Rarity   `json:"rarity"`
 	CostGold    int      `json:"cost_gold"`   // For shop
 	CostScrap   int      `json:"cost_scrap"`  // For shop
 }
@@ -177,27 +175,25 @@ type Status struct {
 func (s Status) Emoji() string {
 	switch s.Name {
 	case "frost":
-		return "❄️"
+		return "â„ï¸"
 	case "fog":
-		return "🌫️"
+		return "ðŸŒ«ï¸"
 	case "rain":
-		return "🌧️"
+		return "ðŸŒ§ï¸"
 	case "boost":
-		return "🟢"
+		return "ðŸŸ¢"
 	case "damage":
-		return "🔴"
-	case "armor":
-		return "🛡️"
+		return "ðŸ”´"
 	case "shield":
-		return "🛡️"
+		return "ðŸ›¡ï¸"
 	case "poison":
-		return "☠️"
+		return "â˜ ï¸"
 	case "bleeding":
-		return "🩸"
+		return "ðŸ©¸"
 	case "vitality":
-		return "💚"
+		return "ðŸ’š"
 	default:
-		return "❓"
+		return "â“"
 	}
 }
 
@@ -236,7 +232,7 @@ func (p *Player) FactionEmoji() string {
 	if len(p.Collection) > 0 {
 		return p.Collection[0].Faction.Emoji()
 	}
-	return "🏴"
+	return "ðŸ´"
 }
 
 func (p *Player) NationEmoji() string {
@@ -293,26 +289,26 @@ type WeatherState struct {
 func (w *WeatherState) Display() string {
 	switch w.Active {
 	case "frost":
-		return "❄️ Frost"
+		return "â„ï¸ Frost"
 	case "fog":
-		return "🌫️ Fog"
+		return "ðŸŒ«ï¸ Fog"
 	case "rain":
-		return "🌧️ Rain"
+		return "ðŸŒ§ï¸ Rain"
 	default:
-		return "☀️ Clear"
+		return "â˜€ï¸ Clear"
 	}
 }
 
 func (w *WeatherState) Emoji() string {
 	switch w.Active {
 	case "frost":
-		return "❄️"
+		return "â„ï¸"
 	case "fog":
-		return "🌫️"
+		return "ðŸŒ«ï¸"
 	case "rain":
-		return "🌧️"
+		return "ðŸŒ§ï¸"
 	default:
-		return "☀️"
+		return "â˜€ï¸"
 	}
 }
 

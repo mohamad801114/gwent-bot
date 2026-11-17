@@ -2,6 +2,7 @@
 
 import (
 	"context"
+	"net/http"
 	"log"
 	"os"
 	"os/signal"
@@ -119,6 +120,18 @@ func main() {
 	} else {
 		log.Println("Polling mode")
 	}
+
+	// HTTP Health check endpoint for Docker
+	go func() {
+		http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("OK"))
+		})
+		log.Printf("Health server starting on :%s", cfg.WebhookPort)
+		if err := http.ListenAndServe(":"+cfg.WebhookPort, nil); err != nil {
+			log.Printf("Health server error: %v", err)
+		}
+	}()
 
 	bot.Start()
 }

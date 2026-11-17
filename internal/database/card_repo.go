@@ -1,4 +1,4 @@
-package database
+﻿package database
 
 import (
 	"context"
@@ -19,7 +19,7 @@ func NewCardRepo(db *DB) *CardRepo {
 }
 
 func (r *CardRepo) GetCard(ctx context.Context, cardID string) (*models.Card, error) {
-	query := `SELECT id, name, description, faction, type, row, power, armor, provision, is_hero, abilities, art_url, flavor_text, card_group, rarity, cost_gold, cost_scrap FROM cards WHERE id = $1`
+	query := `SELECT id, name, description, faction, type, row, power, is_hero, abilities, art_url, flavor_text, card_group, rarity, cost_gold, cost_scrap FROM cards WHERE id = $1`
 
 	var c models.Card
 	var abilitiesJSON []byte
@@ -27,7 +27,7 @@ func (r *CardRepo) GetCard(ctx context.Context, cardID string) (*models.Card, er
 
 	err := r.db.Pool.QueryRow(ctx, query, cardID).Scan(
 		&c.ID, &c.Name, &c.Description, &c.Faction, &c.Type,
-		&row, &c.Power, &c.Armor, &c.Provision, &c.IsHero,
+		&row, &c.Power, &c.IsHero,
 		&abilitiesJSON, &c.ArtURL, &c.FlavorText, &c.CardGroup, &c.Rarity, &c.CostGold, &c.CostScrap,
 	)
 
@@ -52,7 +52,7 @@ func (r *CardRepo) GetCard(ctx context.Context, cardID string) (*models.Card, er
 }
 
 func (r *CardRepo) GetCardsByNation(ctx context.Context, nation models.Nation) ([]*models.Card, error) {
-	query := `SELECT id, name, description, faction, type, row, power, armor, provision, is_hero, abilities, art_url, flavor_text, card_group, rarity, cost_gold, cost_scrap FROM cards WHERE faction = $1 ORDER BY rarity, provision`
+	query := `SELECT id, name, description, faction, type, row, power, is_hero, abilities, art_url, flavor_text, card_group, rarity, cost_gold, cost_scrap FROM cards WHERE faction = $1 ORDER BY rarity`
 
 	rows, err := r.db.Pool.Query(ctx, query, nation)
 	if err != nil {
@@ -68,7 +68,7 @@ func (r *CardRepo) GetCardsByNation(ctx context.Context, nation models.Nation) (
 
 		err := rows.Scan(
 			&c.ID, &c.Name, &c.Description, &c.Faction, &c.Type,
-			&row, &c.Power, &c.Armor, &c.Provision, &c.IsHero,
+			&row, &c.Power, &c.IsHero,
 			&abilitiesJSON, &c.ArtURL, &c.FlavorText, &c.CardGroup, &c.Rarity, &c.CostGold, &c.CostScrap,
 		)
 		if err != nil {
@@ -93,7 +93,7 @@ func (r *CardRepo) GetCardsByFaction(ctx context.Context, faction models.Faction
 }
 
 func (r *CardRepo) GetCardsByRarity(ctx context.Context, rarity models.Rarity) ([]*models.Card, error) {
-	query := `SELECT id, name, description, faction, type, row, power, armor, provision, is_hero, abilities, art_url, flavor_text, card_group, rarity, cost_gold, cost_scrap FROM cards WHERE rarity = $1 ORDER BY faction, provision`
+	query := `SELECT id, name, description, faction, type, row, power, is_hero, abilities, art_url, flavor_text, card_group, rarity, cost_gold, cost_scrap FROM cards WHERE rarity = $1 ORDER BY faction`
 
 	rows, err := r.db.Pool.Query(ctx, query, rarity)
 	if err != nil {
@@ -109,7 +109,7 @@ func (r *CardRepo) GetCardsByRarity(ctx context.Context, rarity models.Rarity) (
 
 		err := rows.Scan(
 			&c.ID, &c.Name, &c.Description, &c.Faction, &c.Type,
-			&row, &c.Power, &c.Armor, &c.Provision, &c.IsHero,
+			&row, &c.Power, &c.IsHero,
 			&abilitiesJSON, &c.ArtURL, &c.FlavorText, &c.CardGroup, &c.Rarity, &c.CostGold, &c.CostScrap,
 		)
 		if err != nil {
@@ -130,7 +130,7 @@ func (r *CardRepo) GetCardsByRarity(ctx context.Context, rarity models.Rarity) (
 }
 
 func (r *CardRepo) GetCardsByType(ctx context.Context, cardType models.CardType) ([]*models.Card, error) {
-	query := `SELECT id, name, description, faction, type, row, power, armor, provision, is_hero, abilities, art_url, flavor_text, card_group, rarity, cost_gold, cost_scrap FROM cards WHERE type = $1 ORDER BY faction, rarity, provision`
+	query := `SELECT id, name, description, faction, type, row, power, is_hero, abilities, art_url, flavor_text, card_group, rarity, cost_gold, cost_scrap FROM cards WHERE type = $1 ORDER BY faction, rarity`
 
 	rows, err := r.db.Pool.Query(ctx, query, cardType)
 	if err != nil {
@@ -146,7 +146,7 @@ func (r *CardRepo) GetCardsByType(ctx context.Context, cardType models.CardType)
 
 		err := rows.Scan(
 			&c.ID, &c.Name, &c.Description, &c.Faction, &c.Type,
-			&row, &c.Power, &c.Armor, &c.Provision, &c.IsHero,
+			&row, &c.Power, &c.IsHero,
 			&abilitiesJSON, &c.ArtURL, &c.FlavorText, &c.CardGroup, &c.Rarity, &c.CostGold, &c.CostScrap,
 		)
 		if err != nil {
@@ -177,7 +177,7 @@ func (r *CardRepo) GetRandomCards(ctx context.Context, nations []models.Nation, 
 
 	// For simplicity, just get random cards from the specified nations
 	query := fmt.Sprintf(`
-		SELECT id, name, description, faction, type, row, power, armor, provision, is_hero, abilities, art_url, flavor_text, card_group, rarity, cost_gold, cost_scrap 
+		SELECT id, name, description, faction, type, row, power, is_hero, abilities, art_url, flavor_text, card_group, rarity, cost_gold, cost_scrap 
 		FROM cards 
 		WHERE faction IN (%s) 
 		ORDER BY RANDOM() 
@@ -200,7 +200,7 @@ func (r *CardRepo) GetRandomCards(ctx context.Context, nations []models.Nation, 
 
 		err := rows.Scan(
 			&c.ID, &c.Name, &c.Description, &c.Faction, &c.Type,
-			&row, &c.Power, &c.Armor, &c.Provision, &c.IsHero,
+			&row, &c.Power, &c.IsHero,
 			&abilitiesJSON, &c.ArtURL, &c.FlavorText, &c.CardGroup, &c.Rarity, &c.CostGold, &c.CostScrap,
 		)
 		if err != nil {
@@ -221,10 +221,12 @@ func (r *CardRepo) GetRandomCards(ctx context.Context, nations []models.Nation, 
 }
 
 func (r *CardRepo) GetAllCards(ctx context.Context) ([]*models.Card, error) {
-	query := `SELECT id, name, description, faction, type, row, power, armor, provision, is_hero, abilities, art_url, flavor_text, card_group, rarity, cost_gold, cost_scrap FROM cards ORDER BY faction, rarity, provision`
+	query := `SELECT id, name, description, faction, type, row, power, is_hero, abilities, art_url, flavor_text, card_group, rarity, cost_gold, cost_scrap FROM cards ORDER BY faction, rarity`
 
+	log.Printf("DEBUG GetAllCards: executing query")
 	rows, err := r.db.Pool.Query(ctx, query)
 	if err != nil {
+		log.Printf("ERROR GetAllCards: query failed: %v", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -237,10 +239,11 @@ func (r *CardRepo) GetAllCards(ctx context.Context) ([]*models.Card, error) {
 
 		err := rows.Scan(
 			&c.ID, &c.Name, &c.Description, &c.Faction, &c.Type,
-			&row, &c.Power, &c.Armor, &c.Provision, &c.IsHero,
+			&row, &c.Power, &c.IsHero,
 			&abilitiesJSON, &c.ArtURL, &c.FlavorText, &c.CardGroup, &c.Rarity, &c.CostGold, &c.CostScrap,
 		)
 		if err != nil {
+			log.Printf("ERROR GetAllCards: scan failed: %v", err)
 			return nil, err
 		}
 
@@ -254,11 +257,15 @@ func (r *CardRepo) GetAllCards(ctx context.Context) ([]*models.Card, error) {
 		cards = append(cards, &c)
 	}
 
+	log.Printf("DEBUG GetAllCards: returned %d cards", len(cards))
+	if len(cards) > 0 {
+		log.Printf("DEBUG GetAllCards: first card: %s (ID: %s, Faction: %s, Rarity: %s)", cards[0].Name, cards[0].ID, cards[0].Faction, cards[0].Rarity)
+	}
 	return cards, nil
 }
 
 func (r *CardRepo) GetFundamentalCards(ctx context.Context) ([]*models.Card, error) {
-	query := `SELECT id, name, description, faction, type, row, power, armor, provision, is_hero, abilities, art_url, flavor_text, card_group, rarity, cost_gold, cost_scrap FROM cards WHERE rarity IN ($1, $2) AND provision <= 8 ORDER BY faction, rarity, provision`
+	query := `SELECT id, name, description, faction, type, row, power, is_hero, abilities, art_url, flavor_text, card_group, rarity, cost_gold, cost_scrap FROM cards WHERE rarity IN ($1, $2) ORDER BY faction, rarity`
 
 	rows, err := r.db.Pool.Query(ctx, query, models.RarityCommon, models.RarityRare)
 	if err != nil {
@@ -274,7 +281,7 @@ func (r *CardRepo) GetFundamentalCards(ctx context.Context) ([]*models.Card, err
 
 		err := rows.Scan(
 			&c.ID, &c.Name, &c.Description, &c.Faction, &c.Type,
-			&row, &c.Power, &c.Armor, &c.Provision, &c.IsHero,
+			&row, &c.Power, &c.IsHero,
 			&abilitiesJSON, &c.ArtURL, &c.FlavorText, &c.CardGroup, &c.Rarity, &c.CostGold, &c.CostScrap,
 		)
 		if err != nil {
@@ -298,8 +305,10 @@ func (r *CardRepo) GetFundamentalCards(ctx context.Context) ([]*models.Card, err
 func (r *CardRepo) GetShopItems(ctx context.Context) ([]*models.ShopItem, error) {
 	query := `SELECT id, name, description, card_id, cost_gold, cost_scrap, stock, level_required FROM shop_items WHERE stock != 0 ORDER BY level_required, cost_gold`
 
+	log.Printf("DEBUG GetShopItems: executing query")
 	rows, err := r.db.Pool.Query(ctx, query)
 	if err != nil {
+		log.Printf("ERROR GetShopItems: query failed: %v", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -314,6 +323,7 @@ func (r *CardRepo) GetShopItems(ctx context.Context) ([]*models.ShopItem, error)
 			&item.CostGold, &item.CostScrap, &item.Stock, &item.LevelRequired,
 		)
 		if err != nil {
+			log.Printf("ERROR GetShopItems: scan failed: %v", err)
 			return nil, err
 		}
 
@@ -323,6 +333,13 @@ func (r *CardRepo) GetShopItems(ctx context.Context) ([]*models.ShopItem, error)
 		items = append(items, &item)
 	}
 
+	log.Printf("DEBUG GetShopItems: returned %d shop items", len(items))
+	for i, item := range items {
+		if i < 5 {
+			log.Printf("DEBUG GetShopItems: item[%d]: ID=%s, Name=%s, CardID=%s, CostGold=%d, CostScrap=%d, Stock=%d, LevelReq=%d", 
+				i, item.ID, item.Name, item.CardID, item.CostGold, item.CostScrap, item.Stock, item.LevelRequired)
+		}
+	}
 	return items, nil
 }
 

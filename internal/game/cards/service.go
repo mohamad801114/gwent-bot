@@ -1,4 +1,4 @@
-package cards
+﻿package cards
 
 import (
 	"context"
@@ -80,7 +80,7 @@ func (s *Service) GetStarterDeck(ctx context.Context, nation models.Nation) ([]*
 
 	var starterCards []*models.Card
 	for _, card := range cards {
-		if (card.Rarity == models.RarityCommon || card.Rarity == models.RarityRare) && card.Provision <= 8 {
+		if card.Rarity == models.RarityCommon || card.Rarity == models.RarityRare {
 			starterCards = append(starterCards, card)
 		}
 	}

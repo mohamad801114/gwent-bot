@@ -77,6 +77,7 @@ func (h *Handlers) RegisterRoutes() {
 	h.bot.Handle("/chest", h.OnChest)
 	h.bot.Handle("/leader", h.OnLeader)
 	h.bot.Handle("/testcb", h.OnTestCallback)
+	h.bot.Handle("/debug", h.AdminMiddleware(h.OnDebug))
 
 	// Admin routes (with middleware)
 	h.bot.Handle("/admin", h.AdminMiddleware(h.OnAdmin))
@@ -134,7 +135,8 @@ func (h *Handlers) isAdmin(userID int64) bool {
 
 // answerCallback answers the callback query to remove loading state
 func (h *Handlers) answerCallback(c tele.Context) {
-	if cb := c.Callback(); cb != nil {
+	if // Callback already answered above
+	cb := c.Callback(); cb != nil {
 		if err := c.Bot().Respond(cb, &tele.CallbackResponse{Text: ""}); err != nil {
 			log.Printf("ERROR: Failed to answer callback query in answerCallback: %v", err)
 		}
@@ -727,7 +729,7 @@ func (h *Handlers) OnAdminCards(c tele.Context) error {
 			card.Rarity.Emoji(),
 			html.EscapeString(card.Name),
 			card.Nation.Emoji(),
-			card.Provision,
+			
 			html.EscapeString(card.ID),
 		))
 	}
@@ -980,15 +982,11 @@ func (h *Handlers) showBattleState(c tele.Context, b *models.Battle, player *mod
 }
 
 func (h *Handlers) OnCallback(c tele.Context) error {
+	// Answer callback immediately to remove loading state
+	h.answerCallback(c)
+	
 	cb := c.Callback()
 	if cb != nil {
-		// Answer callback query to remove loading state
-		if err := c.Bot().Respond(cb, &tele.CallbackResponse{
-			Text: "",
-		}); err != nil {
-			log.Printf("ERROR: Failed to answer callback query: %v", err)
-		}
-
 		data := cb.Data
 		log.Printf("DEBUG OnCallback: processing data=%q", data)
 
@@ -1043,6 +1041,7 @@ func (h *Handlers) OnCallback(c tele.Context) error {
 }
 
 func (h *Handlers) handleTestCallback(c tele.Context, data string) error {
+	h.answerCallback(c)
 	if data == "test_click" {
 		return c.Send("? Callback works! Button click detected.", tele.ModeHTML)
 	}
@@ -1058,6 +1057,7 @@ func (h *Handlers) OnTestCallback(c tele.Context) error {
 }
 
 func (h *Handlers) handleBattleCallback(c tele.Context, data string) error {
+	h.answerCallback(c)
 	parts := strings.Split(data, ":")
 	if len(parts) < 2 {
 		return nil
@@ -1151,6 +1151,7 @@ func (h *Handlers) handleBattleCallback(c tele.Context, data string) error {
 }
 
 func (h *Handlers) handleShopCallback(c tele.Context, data string) error {
+	h.answerCallback(c)
 	log.Printf("DEBUG handleShopCallback: data=%s", data)
 	ctx := context.Background()
 	user := c.Sender()
@@ -1315,6 +1316,7 @@ func (h *Handlers) buyAxe(c tele.Context, ctx context.Context, player *models.Pl
 }
 
 func (h *Handlers) handleMineCallback(c tele.Context, data string) error {
+	h.answerCallback(c)
 	ctx := context.Background()
 	user := c.Sender()
 	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, user.ID)
@@ -1354,10 +1356,12 @@ func (h *Handlers) handleMineCallback(c tele.Context, data string) error {
 }
 
 func (h *Handlers) handleChestCallback(c tele.Context, data string) error {
+	h.answerCallback(c)
 	return c.Send(h.renderer.InfoMessage("Chest feature coming soon!"), tele.ModeHTML)
 }
 
 func (h *Handlers) handleLeaderCallback(c tele.Context, data string) error {
+	h.answerCallback(c)
 	ctx := context.Background()
 	user := c.Sender()
 	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, user.ID)
@@ -1379,10 +1383,12 @@ func (h *Handlers) handleLeaderCallback(c tele.Context, data string) error {
 }
 
 func (h *Handlers) handleDeckCallback(c tele.Context, data string) error {
+	h.answerCallback(c)
 	return c.Send(h.renderer.InfoMessage("Deck management coming soon!"), tele.ModeHTML)
 }
 
 func (h *Handlers) handleConfirmCallback(c tele.Context, data string) error {
+	h.answerCallback(c)
 	parts := strings.Split(data, ":")
 	if len(parts) < 3 {
 		return nil
@@ -1427,6 +1433,7 @@ func (h *Handlers) handleConfirmCallback(c tele.Context, data string) error {
 }
 
 func (h *Handlers) handleFriendCallback(c tele.Context, data string) error {
+	h.answerCallback(c)
 	ctx := context.Background()
 	user := c.Sender()
 	player, err := h.playerRepo.GetPlayerByTelegramID(ctx, user.ID)
@@ -1511,6 +1518,51 @@ func (h *Handlers) OnText(c tele.Context) error {
 	}
 
 	return nil
+}
+
+func (h *Handlers) OnDebug(c tele.Context) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	
+	// DB health
+	dbOk := h.db.Pool.Ping(ctx) == nil
+	
+	// Count cards
+	var cardCount int
+	h.db.Pool.QueryRow(ctx, "SELECT count(*) FROM cards").Scan(&cardCount)
+	
+	// Count shop items
+	var shopCount int
+	h.db.Pool.QueryRow(ctx, "SELECT count(*) FROM shop_items").Scan(&shopCount)
+	
+	// Active battles
+	var battleCount int
+	h.db.Pool.QueryRow(ctx, "SELECT count(*) FROM battles WHERE phase != $1", models.PhaseFinished).Scan(&battleCount)
+	
+	// Count players
+	var playerCount int
+	h.db.Pool.QueryRow(ctx, "SELECT count(*) FROM players").Scan(&playerCount)
+	
+	// Check schema_migrations
+	var migrationCount int
+	h.db.Pool.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&migrationCount)
+	
+	msg := fmt.Sprintf(`<b>🔧 Debug Info</b>
+
+<b>Database:</b> %s
+<b>Cards in DB:</b> %d
+<b>Shop Items:</b> %d
+<b>Active Battles:</b> %d
+<b>Total Players:</b> %d
+<b>Migrations Applied:</b> %d
+<b>Bot Mode:</b> %s
+<b>Admin IDs:</b> %v
+`, 
+		map[bool]string{true: "✅ Connected", false: "❌ Disconnected"}[dbOk],
+		cardCount, shopCount, battleCount, playerCount, migrationCount,
+		h.cfg.BotMode, h.cfg.AdminUserIDs)
+	
+	return c.Send(msg, tele.ModeHTML)
 }
 
 func (h *Handlers) getAvailableChests(level models.PlayerLevel) []models.Chest {

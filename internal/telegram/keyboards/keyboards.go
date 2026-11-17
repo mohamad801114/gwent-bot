@@ -157,7 +157,7 @@ func (k *KeyboardBuilder) ShopCards(cards []models.Card, page, totalPages int) *
 			break
 		}
 		btn := markup.Data(
-			card.Rarity.Emoji()+" "+card.Name+" ["+card.Nation.Emoji()+"] P:"+string(rune(card.Provision)),
+			card.Rarity.Emoji()+" "+card.Name+" ["+card.Nation.Emoji()+"] P:"+string(rune(card.Power)),
 			"shop_buy_card:"+card.ID,
 		)
 		markup.Row(btn)
