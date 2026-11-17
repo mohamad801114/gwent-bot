@@ -515,14 +515,24 @@ func (r *Renderer) GetCardPhoto(card *models.Card) (*tele.Photo, error) {
 		return nil, nil
 	}
 
+	// Convert GitHub asset URLs to raw.githubusercontent.com for direct image access
+	imageURL := card.ArtURL
+	if strings.Contains(imageURL, "github.com/mohamad801114/gwent-bot/assets/images/") {
+		// Convert: https://github.com/mohamad801114/gwent-bot/assets/images/X.jpg
+		// To: https://raw.githubusercontent.com/mohamad801114/gwent-bot/main/assets/images/X.jpg
+		imageURL = strings.Replace(imageURL,
+			"github.com/mohamad801114/gwent-bot/assets/images/",
+			"raw.githubusercontent.com/mohamad801114/gwent-bot/main/assets/images/", 1)
+	}
+
 	var file tele.File
-	if strings.HasPrefix(card.ArtURL, "http") {
-		file = tele.FromURL(card.ArtURL)
+	if strings.HasPrefix(imageURL, "http") {
+		file = tele.FromURL(imageURL)
 	} else {
-		if _, err := os.Stat(card.ArtURL); os.IsNotExist(err) {
+		if _, err := os.Stat(imageURL); os.IsNotExist(err) {
 			return nil, nil
 		}
-		file = tele.FromDisk(card.ArtURL)
+		file = tele.FromDisk(imageURL)
 	}
 
 	photo := &tele.Photo{

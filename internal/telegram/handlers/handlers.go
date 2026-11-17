@@ -398,23 +398,46 @@ func (h *Handlers) OnShopCards(c tele.Context) error {
 	// Get the card for current page (1-indexed)
 	currentCard := buyableCards[page-1]
 
-	// Send the card photo
+	// Get card photo with fixed URL
 	photo, err := h.renderer.GetCardPhoto(&currentCard)
-	if err == nil && photo != nil {
-		photo.Caption = h.renderer.ShopCardDetailMessage(currentCard, page, len(buyableCards))
-		if err := c.Send(photo, tele.ModeHTML); err != nil {
-			log.Printf("DEBUG OnShopCards: failed to send photo: %v", err)
-		}
+	if err != nil {
+		log.Printf("DEBUG OnShopCards: GetCardPhoto error: %v", err)
 	}
 
-	// Edit the callback message with card details and navigation
-	msg := h.renderer.ShopCardDetailMessage(currentCard, page, len(buyableCards))
-	err = c.Edit(msg, h.keyboardBuilder.ShopCards(buyableCards, page, len(buyableCards)), tele.ModeHTML)
-	if err != nil {
-		log.Printf("DEBUG OnShopCards: failed to edit message: %v", err)
-		return c.Send(msg, h.keyboardBuilder.ShopCards(buyableCards, page, len(buyableCards)), tele.ModeHTML)
+	// Prepare caption and keyboard
+	caption := h.renderer.ShopCardDetailMessage(currentCard, page, len(buyableCards))
+	keyboard := h.keyboardBuilder.ShopCards(buyableCards, page, len(buyableCards))
+
+	// If we have a photo, send/edit with photo and keyboard together
+	if photo != nil {
+		photo.Caption = caption
+		// For callback queries, try to edit the message with photo and keyboard
+		// If the original message is not a photo, this will fail and we'll send new
+		if c.Callback() != nil {
+			// Try to edit with photo (works if original was photo)
+			// telebot v3 doesn't support editing text->photo directly
+			// So we send new photo with keyboard and delete old if needed
+			if err := c.Send(photo, keyboard, tele.ModeHTML); err != nil {
+				log.Printf("DEBUG OnShopCards: failed to send photo with keyboard: %v", err)
+			}
+			// Try to delete the old callback message to avoid clutter
+			if c.Callback().Message != nil {
+				c.Bot().Delete(c.Callback().Message)
+			}
+		} else {
+			// Regular command, send new photo with keyboard
+			if err := c.Send(photo, keyboard, tele.ModeHTML); err != nil {
+				log.Printf("DEBUG OnShopCards: failed to send photo: %v", err)
+			}
+		}
+		return nil
 	}
-	return nil
+
+	// Fallback: no photo available, send text with keyboard
+	if c.Callback() != nil {
+		return c.Edit(caption, keyboard, tele.ModeHTML)
+	}
+	return c.Send(caption, keyboard, tele.ModeHTML)
 }
 
 func (h *Handlers) OnShopChests(c tele.Context) error {
