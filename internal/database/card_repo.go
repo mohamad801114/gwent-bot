@@ -1,6 +1,7 @@
 ﻿package database
 
 import (
+	"log"
 	"context"
 	"database/sql"
 	"encoding/json"
