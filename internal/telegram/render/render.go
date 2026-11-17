@@ -36,40 +36,36 @@ func (r *Renderer) WelcomeMessage(player *models.Player) string {
 }
 
 func (r *Renderer) HelpMessage() string {
-	return fmt.Sprintf(`<b>🎮 Gwent Bot Commands</b>
-
-<b>Main Commands:</b>
-/start - Register and get starter deck
-/deck - View and manage your deck
-/collection - View your card collection
-/battle - Start a battle (PvE or PvP)
-/shop - Buy cards, chests, and tools
-/mine - Extract gold from your mine
-/chest - Open reward chests
-/leader - Select your leader ability
-/profile - View your stats and progress
-/help - Show this help message
-
-<b>Game Mechanics:</b>
-• <b>Battles:</b> 3 rounds, best of 3. Play cards to rows (Melee/Ranged/Siege). Highest total power wins round.
-• <b>Leader:</b> Once per battle, use your leader'"'"'s ability.
-• <b>Pass:</b> When you pass, you'"'"'re done for the round. Opponent plays alone until they pass.
-• <b>Win:</b> Win 2 rounds to win the match.
-
-<b>Progression:</b>
-• <b>Daily Coin:</b> Say "<code>%s</code>" once per day for free gold
-• <b>Axe:</b> Say "<code>%s</code>" to get a mining axe (1hr cooldown)
-• <b>Mine:</b> Extract gold daily with axe (durability 10)
-• <b>Chests:</b> Open chests for cards and gold (level-based cooldown)
-• <b>XP:</b> Earn XP from battles to level up
-
-<b>Keywords:</b>
-• <b>Deploy:</b> Trigger when played
-• <b>Deathwish:</b> Trigger when destroyed
-• <b>Order:</b> Manual ability (once per turn)
-• <b>Zeal:</b> Order can be used immediately
-• <b>Vitality:</b> Boost self by X
-• <b>Shield:</b> Protects health from damage`,
+	return fmt.Sprintf("<b>🎮 Gwent Bot Commands</b>\n\n"+
+		"<b>Main Commands:</b>\n"+
+		"/start - Register and get starter deck\n"+
+		"/deck - View and manage your deck\n"+
+		"/collection - View your card collection\n"+
+		"/battle - Start a battle (PvE or PvP)\n"+
+		"/shop - Buy cards, chests, and tools\n"+
+		"/mine - Extract gold from your mine\n"+
+		"/chest - Open reward chests\n"+
+		"/leader - Select your leader ability\n"+
+		"/profile - View your stats and progress\n"+
+		"/help - Show this help message\n\n"+
+		"<b>Game Mechanics:</b>\n"+
+		"• <b>Battles:</b> 3 rounds, best of 3. Play cards to rows (Melee/Ranged/Siege). Highest total power wins round.\n"+
+		"• <b>Leader:</b> Once per battle, use your leader's ability.\n"+
+		"• <b>Pass:</b> When you pass, you're done for the round. Opponent plays alone until they pass.\n"+
+		"• <b>Win:</b> Win 2 rounds to win the match.\n\n"+
+		"<b>Progression:</b>\n"+
+		"• <b>Daily Coin:</b> Say \"<code>%s</code>\" once per day for free gold\n"+
+		"• <b>Axe:</b> Say \"<code>%s</code>\" to get a mining axe (1hr cooldown)\n"+
+		"• <b>Mine:</b> Extract gold daily with axe (durability 10)\n"+
+		"• <b>Chests:</b> Open chests for cards and gold (level-based cooldown)\n"+
+		"• <b>XP:</b> Earn XP from battles to level up\n\n"+
+		"<b>Keywords:</b>\n"+
+		"• <b>Deploy:</b> Trigger when played\n"+
+		"• <b>Deathwish:</b> Trigger when destroyed\n"+
+		"• <b>Order:</b> Manual ability (once per turn)\n"+
+		"• <b>Zeal:</b> Order can be used immediately\n"+
+		"• <b>Vitality:</b> Boost self by X\n"+
+		"• <b>Shield:</b> Protects health from damage",
 		r.cfg.DailyCoinWord,
 		r.cfg.AxeWord,
 	)
@@ -110,7 +106,7 @@ func (r *Renderer) ProfileMessage(player *models.Player) string {
 	}
 
 	return fmt.Sprintf(
-		"<b>👤 %s'"'"'s Profile</b>\n\n"+
+		"<b>👤 %s's Profile</b>\n\n"+
 			"<b>Level:</b> %d (XP: %d)\n"+
 			"<b>Nation:</b> %s\n\n"+
 			"<b>💰 Resources:</b>\n"+
@@ -252,7 +248,7 @@ func (r *Renderer) BattleStateMessage(b *models.Battle, playerID int64, playerNa
 	sb.WriteString(r.renderBoard(oppBoard, false))
 	sb.WriteString(fmt.Sprintf("Hand: %d cards%s\n\n",
 		len(oppHand),
-		ternary(oppLeaderUsed, " | Leader: ✅ Used", " | Leader: ­ Ready"),
+		ternary(oppLeaderUsed, " | Leader: ✅ Used", " | Leader: ⏳ Ready"),
 	))
 
 	if b.Weather.Active != "clear" {
@@ -270,13 +266,13 @@ func (r *Renderer) BattleStateMessage(b *models.Battle, playerID int64, playerNa
 	sb.WriteString(r.renderBoard(myBoard, true))
 	sb.WriteString(fmt.Sprintf("Hand: %d cards%s\n",
 		len(myHand),
-		ternary(myLeaderUsed, " | Leader: ✅ Used", " | Leader: ­ Ready"),
+		ternary(myLeaderUsed, " | Leader: ✅ Used", " | Leader: ⏳ Ready"),
 	))
 
 	if myTurn {
 		sb.WriteString("\n🎯 <b>YOUR TURN</b> - Play a card or Pass!")
 	} else {
-		sb.WriteString("\n⏳ Opponent'"'"'s turn...")
+		sb.WriteString("\n⏳ Opponent's turn...")
 	}
 
 	return sb.String()
@@ -306,7 +302,6 @@ func (r *Renderer) renderBoard(board *models.BoardState, showDetails bool) strin
 				sb.WriteString(" | ")
 			}
 			powerStr := fmt.Sprintf("%d", card.Power)
-			// Show base power if different (damaged/boosted)
 			if card.Power != card.BasePower {
 				if card.Power > card.BasePower {
 					powerStr = fmt.Sprintf("%d💢(%d)", card.Power, card.BasePower)
@@ -387,7 +382,7 @@ func (r *Renderer) MineMessage(player *models.Player, cfg *config.Config) string
 				"• Extract up to %d times/day\n"+
 				"• %d Gold per extract\n"+
 				"• Requires Axe (durability %d)\n"+
-				"• Say '"'"'%s'"'"' to get an axe",
+				"• Say '%s' to get an axe",
 			cfg.MineGoldPerExtract*10,
 			cfg.MineMaxExtracts,
 			cfg.MineGoldPerExtract,
@@ -408,7 +403,7 @@ func (r *Renderer) MineMessage(player *models.Player, cfg *config.Config) string
 			"🪓 %s\n"+
 			"⛏️ Extracts today: %d/%d (%d left)\n"+
 			"💰 Gold per extract: %d\n\n"+
-			"Say '"'"'%s'"'"' to get a new axe (1hr cooldown)",
+			"Say '%s' to get a new axe (1hr cooldown)",
 		axeStatus,
 		player.MineExtractsToday,
 		cfg.MineMaxExtracts,
@@ -501,30 +496,32 @@ func (r *Renderer) InfoMessage(msg string) string {
 }
 
 func (r *Renderer) NotRegisteredMessage() string {
-	return "❌ You'"'"'re not registered! Use /start to begin your journey."
+	return "❌ You're not registered! Use /start to begin your journey."
 }
 
-// GetCardPhoto returns a telebot Photo for the card'"'"'s art
 func (r *Renderer) GetCardPhoto(card *models.Card) (*tele.Photo, error) {
 	if card == nil || card.ArtURL == "" {
 		return nil, nil
 	}
 
-	// Check if file exists
-	if _, err := os.Stat(card.ArtURL); os.IsNotExist(err) {
-		return nil, nil
+	var file tele.File
+	if strings.HasPrefix(card.ArtURL, "http") {
+		file = tele.FromURL(card.ArtURL)
+	} else {
+		if _, err := os.Stat(card.ArtURL); os.IsNotExist(err) {
+			return nil, nil
+		}
+		file = tele.FromDisk(card.ArtURL)
 	}
 
-	// Read the file and create a photo
 	photo := &tele.Photo{
-		File:    tele.FromDisk(card.ArtURL),
+		File:    file,
 		Caption: r.CardCaption(card),
 	}
 
 	return photo, nil
 }
 
-// CardCaption generates the caption for a card photo
 func (r *Renderer) CardCaption(card *models.Card) string {
 	cost := ""
 	if card.CostGold > 0 {
@@ -546,18 +543,15 @@ func (r *Renderer) CardCaption(card *models.Card) string {
 	)
 }
 
-// SendCardPhoto sends a card photo with caption to the chat
 func (r *Renderer) SendCardPhoto(c tele.Context, card *models.Card) error {
 	photo, err := r.GetCardPhoto(card)
 	if err != nil || photo == nil {
-		// Fallback to text message if no photo
 		msg := r.CardCaption(card)
 		return c.Send(msg, tele.ModeHTML)
 	}
 	return c.Send(photo, tele.ModeHTML)
 }
 
-// BattleStateMessageWithPhoto returns battle state message and optionally a card photo
 func (r *Renderer) BattleStateMessageWithPhoto(b *models.Battle, playerID int64, playerName string, opponentName string) (string, *tele.Photo) {
 	isPlayer1 := b.Player1ID == playerID
 
@@ -603,7 +597,7 @@ func (r *Renderer) BattleStateMessageWithPhoto(b *models.Battle, playerID int64,
 	sb.WriteString(r.renderBoard(oppBoard, false))
 	sb.WriteString(fmt.Sprintf("Hand: %d cards%s\n\n",
 		len(oppHand),
-		ternary(oppLeaderUsed, " | Leader: ✅ Used", " | Leader: ­ Ready"),
+		ternary(oppLeaderUsed, " | Leader: ✅ Used", " | Leader: ⏳ Ready"),
 	))
 
 	if b.Weather.Active != "clear" {
@@ -621,22 +615,18 @@ func (r *Renderer) BattleStateMessageWithPhoto(b *models.Battle, playerID int64,
 	sb.WriteString(r.renderBoard(myBoard, true))
 	sb.WriteString(fmt.Sprintf("Hand: %d cards%s\n",
 		len(myHand),
-		ternary(myLeaderUsed, " | Leader: ✅ Used", " | Leader: ­ Ready"),
+		ternary(myLeaderUsed, " | Leader: ✅ Used", " | Leader: ⏳ Ready"),
 	))
 
 	if myTurn {
 		sb.WriteString("\n🎯 <b>YOUR TURN</b> - Play a card or Pass!")
 	} else {
-		sb.WriteString("\n⏳ Opponent'"'"'s turn...")
+		sb.WriteString("\n⏳ Opponent's turn...")
 	}
 
-	// Return the message and optionally a photo of the last played card
-	// This is just a placeholder - the actual card photo would be sent separately
 	return sb.String(), nil
 }
 
-// GetCardPhotoByID returns a telebot Photo for a card by ID
 func (r *Renderer) GetCardPhotoByID(cardID string) (*tele.Photo, error) {
-	// This would need access to card service - kept for reference
 	return nil, nil
 }

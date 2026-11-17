@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"html"
 	"log"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -243,14 +242,9 @@ func (h *Handlers) OnDeck(c tele.Context) error {
 
 	// Send photos for each card in deck
 	for _, card := range deckCards {
-		if card.ArtURL != "" {
-			if _, err := os.Stat(card.ArtURL); err == nil {
-				photo := &tele.Photo{
-					File:    tele.FromDisk(card.ArtURL),
-					Caption: h.renderer.CardCaption(&card),
-				}
-				c.Send(photo, tele.ModeHTML)
-			}
+		photo, err := h.renderer.GetCardPhoto(&card)
+		if err == nil && photo != nil {
+			c.Send(photo, tele.ModeHTML)
 		}
 	}
 
@@ -291,15 +285,10 @@ func (h *Handlers) OnCollection(c tele.Context) error {
 		if count >= 10 {
 			break
 		}
-		if card.ArtURL != "" {
-			if _, err := os.Stat(card.ArtURL); err == nil {
-				photo := &tele.Photo{
-					File:    tele.FromDisk(card.ArtURL),
-					Caption: h.renderer.CardCaption(&card),
-				}
-				c.Send(photo, tele.ModeHTML)
-				count++
-			}
+		photo, err := h.renderer.GetCardPhoto(&card)
+		if err == nil && photo != nil {
+			c.Send(photo, tele.ModeHTML)
+			count++
 		}
 	}
 
@@ -389,17 +378,12 @@ func (h *Handlers) OnShopCards(c tele.Context) error {
 		if count >= 5 {
 			break
 		}
-		if card.ArtURL != "" {
-			if _, err := os.Stat(card.ArtURL); err == nil {
-				photo := &tele.Photo{
-					File:    tele.FromDisk(card.ArtURL),
-					Caption: h.renderer.CardCaption(&card),
-				}
-				if err := c.Send(photo, tele.ModeHTML); err != nil {
-					log.Printf("DEBUG OnShopCards: failed to send photo: %v", err)
-				}
-				count++
+		photo, err := h.renderer.GetCardPhoto(&card)
+		if err == nil && photo != nil {
+			if err := c.Send(photo, tele.ModeHTML); err != nil {
+				log.Printf("DEBUG OnShopCards: failed to send photo: %v", err)
 			}
+			count++
 		}
 	}
 
@@ -729,7 +713,7 @@ func (h *Handlers) OnAdminCards(c tele.Context) error {
 			card.Rarity.Emoji(),
 			html.EscapeString(card.Name),
 			card.Nation.Emoji(),
-			
+			card.Power,
 			html.EscapeString(card.ID),
 		))
 	}
@@ -1094,6 +1078,32 @@ func (h *Handlers) handleBattleCallback(c tele.Context, data string) error {
 			return nil
 		}
 		instanceID := parts[2]
+
+		// Find the card in hand to check if it's a special card
+		var hand []models.CardInstance
+		if battle.Player1ID == player.ID {
+			hand = battle.Player1Hand
+		} else {
+			hand = battle.Player2Hand
+		}
+
+		var selectedCard *models.CardInstance
+		for i := range hand {
+			if hand[i].InstanceID == instanceID {
+				selectedCard = &hand[i]
+				break
+			}
+		}
+
+		// If it's a special card, play it directly without row selection
+		if selectedCard != nil && selectedCard.Card != nil && selectedCard.Card.Type == models.CardTypeSpecial {
+			err := h.battleService.PlayCard(ctx, battleID, instanceID, "", player.ID)
+			if err != nil {
+				return c.Send(h.renderer.ErrorMessage(err.Error()), tele.ModeHTML)
+			}
+			return h.showBattleState(c, battle, player)
+		}
+
 		msg := "ðŸ“ <b>Choose row:</b>"
 		return c.Edit(msg, h.keyboardBuilder.RowSelection(instanceID, battleID), tele.ModeHTML)
 
@@ -1244,14 +1254,10 @@ func (h *Handlers) buyCard(c tele.Context, ctx context.Context, player *models.P
 	}
 
 	// Send card photo
-	if card.ArtURL != "" {
-		if _, err := os.Stat(card.ArtURL); err == nil {
-			photo := &tele.Photo{
-				File:    tele.FromDisk(card.ArtURL),
-				Caption: fmt.Sprintf("? <b>Purchased!</b>\n\n%s", h.renderer.CardCaption(card)),
-			}
-			c.Send(photo, tele.ModeHTML)
-		}
+	photo, err := h.renderer.GetCardPhoto(card)
+	if err == nil && photo != nil {
+		photo.Caption = fmt.Sprintf("? <b>Purchased!</b>\n\n%s", h.renderer.CardCaption(card))
+		c.Send(photo, tele.ModeHTML)
 	}
 
 	return c.Send(h.renderer.SuccessMessage(fmt.Sprintf("Successfully purchased %s!", card.Name)), tele.ModeHTML)

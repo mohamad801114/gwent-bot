@@ -200,12 +200,15 @@ func (s *Service) PlayCard(ctx context.Context, battleID, instanceID, row string
 
 	var hand *[]models.CardInstance
 	var board *models.BoardState
+	var graveyard *[]models.CardInstance
 	if isPlayer1 {
 		hand = &battle.Player1Hand
 		board = &battle.Player1Board
+		graveyard = &battle.Player1Graveyard
 	} else {
 		hand = &battle.Player2Hand
 		board = &battle.Player2Board
+		graveyard = &battle.Player2Graveyard
 	}
 
 	cardIndex := -1
@@ -220,13 +223,24 @@ func (s *Service) PlayCard(ctx context.Context, battleID, instanceID, row string
 	}
 
 	card := (*hand)[cardIndex]
-	card.Row = models.RowType(row)
 
+	// Remove from hand
 	*hand = append((*hand)[:cardIndex], (*hand)[cardIndex+1:]...)
 
-	s.addCardToBoard(board, card)
-	s.applyDeployAbilities(battle, &card, isPlayer1)
-	s.recalculateBoardPower(board)
+	// Check if it's a special card (doesn't go to board)
+	if card.Card != nil && card.Card.Type == models.CardTypeSpecial {
+		// Special cards: apply effect and send to graveyard
+		s.applyDeployAbilities(battle, &card, isPlayer1)
+		*graveyard = append(*graveyard, card)
+	} else {
+		// Unit/Hero cards: place on board
+		if row != "" {
+			card.Row = models.RowType(row)
+		}
+		s.addCardToBoard(board, card)
+		s.applyDeployAbilities(battle, &card, isPlayer1)
+		s.recalculateBoardPower(board)
+	}
 
 	battle.UpdatedAt = time.Now()
 	return s.battleRepo.UpdateBattle(ctx, battle)
@@ -313,9 +327,12 @@ func (s *Service) BotTurn(ctx context.Context, battleID string) error {
 	}
 
 	card := battle.Player2Hand[bestIdx]
-	row := string(card.Row)
-	if row == "" {
-		row = "melee"
+	row := ""
+	if card.Card != nil && card.Card.Type != models.CardTypeSpecial {
+		row = string(card.Row)
+		if row == "" {
+			row = "melee"
+		}
 	}
 
 	return s.PlayCard(ctx, battleID, card.InstanceID, row, 0)

@@ -40,7 +40,12 @@ func (r *CardRepo) GetCard(ctx context.Context, cardID string) (*models.Card, er
 	}
 
 	if row.Valid {
-		c.Row = models.RowType(row.String)
+		rowStr := row.String
+		// Handle legacy "close" -> "melee" conversion
+		if rowStr == "close" {
+			rowStr = "melee"
+		}
+		c.Row = models.RowType(rowStr)
 	}
 	if len(abilitiesJSON) > 0 {
 		json.Unmarshal(abilitiesJSON, &c.Abilities)

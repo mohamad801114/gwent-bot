@@ -2,7 +2,6 @@
 
 import (
 	"log"
-	"os"
 	"sync/atomic"
 )
 
