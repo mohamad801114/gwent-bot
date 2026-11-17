@@ -408,23 +408,23 @@ func (h *Handlers) OnShopCards(c tele.Context) error {
 	caption := h.renderer.ShopCardDetailMessage(currentCard, page, len(buyableCards))
 	keyboard := h.keyboardBuilder.ShopCards(buyableCards, page, len(buyableCards))
 
-	// If we have a photo, send/edit with photo and keyboard together
+	// If we have a photo, send it first, then edit to add keyboard
+	// This works around telebot v3 limitation with inline keyboards on photos
 	if photo != nil {
 		photo.Caption = caption
-		// For callback queries, send new photo with keyboard and delete old
-		if c.Callback() != nil {
-			if err := c.Send(photo, keyboard, tele.ModeHTML); err != nil {
-				log.Printf("DEBUG OnShopCards: failed to send photo with keyboard: %v", err)
-			}
-			// Try to delete the old callback message to avoid clutter
-			if c.Callback().Message != nil {
-				c.Bot().Delete(c.Callback().Message)
-			}
-		} else {
-			// Regular command, send new photo with keyboard
-			if err := c.Send(photo, keyboard, tele.ModeHTML); err != nil {
-				log.Printf("DEBUG OnShopCards: failed to send photo: %v", err)
-			}
+		// Send photo first
+		sentMsg, err := c.Bot().Send(c.Chat(), photo, tele.ModeHTML)
+		if err != nil {
+			log.Printf("DEBUG OnShopCards: failed to send photo: %v", err)
+			return nil
+		}
+		// Edit the sent message to add inline keyboard
+		if _, err := c.Bot().Edit(sentMsg, caption, keyboard, tele.ModeHTML); err != nil {
+			log.Printf("DEBUG OnShopCards: failed to edit message with keyboard: %v", err)
+		}
+		// For callback queries, delete the old callback message
+		if c.Callback() != nil && c.Callback().Message != nil {
+			c.Bot().Delete(c.Callback().Message)
 		}
 		return nil
 	}
